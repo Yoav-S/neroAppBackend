@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { getDatabase } from '../config/database';
-import Post, { IPost } from '../models/Post';
 import { AppError, ErrorType, createAppError } from '../utils/errors';
 import PostModel from '../models/Post';
 import { bucket } from '../config/firebaseConfig';
@@ -193,6 +192,3 @@ export const getCategories = async (req: Request, res: Response) => {
     }
 };
 
-function uuidv4() {
-    throw new Error('Function not implemented.');
-}
