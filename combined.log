@@ -983,3 +983,11 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-07-27T09:57:40.071Z"}
 {"level":"info","message":"::1 - - [27/Jul/2024:09:57:41 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 652 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-27T09:57:41.272Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-07-27T09:59:16.298Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-27T11:33:58.531Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-27T11:33:58.536Z"}
+{"level":"info","message":"::1 - - [27/Jul/2024:11:34:06 +0000] \"POST /auth/login HTTP/1.1\" 500 77 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-27T11:34:06.351Z"}
+{"level":"info","message":"::1 - - [27/Jul/2024:11:34:23 +0000] \"POST /auth/login HTTP/1.1\" 500 77 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-27T11:34:23.956Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-27T11:34:37.694Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-27T11:34:37.699Z"}
+{"level":"info","message":"::1 - - [27/Jul/2024:11:34:39 +0000] \"POST /auth/login HTTP/1.1\" 200 417 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-27T11:34:39.999Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-07-27T11:35:40.354Z"}
