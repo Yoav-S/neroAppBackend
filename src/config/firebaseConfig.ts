@@ -5,6 +5,7 @@ dotenv.config();
 
 // Parse the service account key from the environment variable
 const serviceAccount = JSON.parse(ENV.FIREBASE_SERVICE_ACCOUNT_KEY as string);
+console.log('Service Account Key:', ENV.FIREBASE_SERVICE_ACCOUNT_KEY);
 
 // Initialize Firebase Admin
 admin.initializeApp({
