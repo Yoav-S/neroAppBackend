@@ -42,14 +42,14 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     
     // Calculate the total number of pages
     const totalPages = Math.ceil(totalPosts / limit);
-    
+    const isMore: boolean = page !== totalPages;
     // Send the response with the posts and pagination info
     res.status(200).json({
       success: true,
       data: postsWithCategoryNames,
       pagination: {
+        isMore,
         page,
-        limit,
         totalPages,
         totalPosts
       }
