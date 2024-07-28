@@ -37,17 +37,17 @@ export const register = async (req: Request, res: Response) => {
       lastName,
       phone,
       userId,
-      token: jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' }),
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     const result = await usersCollection.insertOne(newUser);
     const user = await usersCollection.findOne({ _id: result.insertedId });
-
+    const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' })
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      token,
       user,
     });
   } catch (error) {
