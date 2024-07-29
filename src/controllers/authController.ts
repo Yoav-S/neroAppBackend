@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import { getDatabase } from '../config/database';
 import mongoose, { Document, Schema } from 'mongoose';
 import nodemailer from 'nodemailer'
+import { bucket } from '../config/firebaseConfig';
 import otpGenerator from 'otp-generator';
 import { ENV } from '../config/env';
 import { AppError, ErrorType, createAppError, getUserFriendlyMessage } from '../utils/errors';
@@ -29,6 +30,13 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const userId = new mongoose.Types.ObjectId().toString();
+
+    // Download the default profile picture
+    const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
+    const file = bucket.file(defaultImagePath);
+    const [metadata] = await file.getMetadata();
+    const defaultPictureUrl = metadata.mediaLink;
+
     const newUser = {
       email,
       role: 'USER',
@@ -37,13 +45,16 @@ export const register = async (req: Request, res: Response) => {
       lastName,
       phone,
       userId,
+      picture: defaultPictureUrl,
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
     const result = await usersCollection.insertOne(newUser);
     const user = await usersCollection.findOne({ _id: result.insertedId });
-    const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' })
+
+    const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
@@ -343,7 +354,12 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
       );
       user = await usersCollection.findOne({ id: user._id });
     } else {
-      // If user doesn't exist, create a new user
+      // If user doesn't exist, create a new user and download the default profile picture
+      const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
+      const file = bucket.file(defaultImagePath);
+      const [metadata] = await file.getMetadata();
+      const defaultPictureUrl = metadata.mediaLink;
+
       const newUser: IUserCreate = {
         email,
         firstName: payload['given_name'] || '',
@@ -351,8 +367,8 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
         role: 'USER',
         userId: new Types.ObjectId().toHexString(),
         googleUserId,
-        picture,
-        authProvider: 'GOOGLE'
+        profilePicture: defaultPictureUrl || undefined,
+        authProvider: 'GOOGLE',
       };
 
       const result = await usersCollection.insertOne(newUser as any);
