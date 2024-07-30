@@ -100,6 +100,7 @@ export const login = async (req: Request, res: Response) => {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
+      picture: user.picture,
       createdAt: user.createdAt
     };
     
@@ -367,7 +368,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
         role: 'USER',
         userId: new Types.ObjectId().toHexString(),
         googleUserId,
-        profilePicture: defaultPictureUrl || undefined,
+        picture: defaultPictureUrl,
         authProvider: 'GOOGLE',
       };
 

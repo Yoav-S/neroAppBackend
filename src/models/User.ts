@@ -8,7 +8,6 @@ export interface IUser extends Document {
   lastName: string;
   role: string;
   phone?: string;
-  profilePicture: string;
   userId: string;
   token?: string;
   googleUserId?: string;
@@ -22,7 +21,6 @@ export interface IUserCreate {
   email: string;
   firstName: string;
   lastName: string;
-  profilePicture?: string;
   role: string;
   userId: string;
   googleUserId?: string;
@@ -37,7 +35,6 @@ const UserSchema: Schema = new Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   phone: { type: String },
-  profilePicture: {type: String, required: true},
   userId: { type: String, unique: true, default: () => new mongoose.Types.ObjectId().toHexString() },
   token: { type: String },
   googleUserId: { type: String },
