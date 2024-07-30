@@ -59,6 +59,10 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
+export const getCategoryPagination = async (req: Request, res: Response) => {
+  console.log('arrived category pagination');
+  
+}
 export const createPost = async (req: Request, res: Response) => {
     console.log('arrived create post');
   
@@ -126,7 +130,7 @@ export const createPost = async (req: Request, res: Response) => {
           const fileUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
           imageUrls.push(fileUrl);
         }
-  
+        res.status(200).json({images: imageUrls});
         // Update the post with the image URLs
         await postsCollection.updateOne(
           { _id: savedPost._id },
@@ -147,48 +151,53 @@ export const createPost = async (req: Request, res: Response) => {
     }
 };
 export const getCategories = async (req: Request, res: Response) => {
+  console.log('arrived get categories');
+  
+  try {
+    const db = getDatabase();
+    const categoriesCollection = db.collection('categories');
     
-    try {
-      const db = getDatabase();
-      const categoriesCollection = db.collection('categories');
-  
-      // Get the page from query parameters
-      const page = parseInt(req.query.page as string, 10) || 1;
-      const limit = 10; // Number of categories per page
-  
-      // Calculate the number of documents to skip
-      const skip = (page - 1) * limit;
-  
-      // Retrieve the categories with pagination
-      const categories = await categoriesCollection.find()
-        .skip(skip)
-        .limit(limit)
-        .toArray(); // Convert cursor to array
-  
-      // Get the total number of documents in the collection
-      const totalCategories = await categoriesCollection.countDocuments();
-  
-      // Calculate the total number of pages
-      const totalPages = Math.ceil(totalCategories / limit);
-  
-      // Send the response with categories and pagination info
-      res.status(200).json({
-        success: true,
-        data: categories,
-        pagination: {
-          page,
-          limit,
-          totalPages,
-          totalCategories
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      if (error instanceof AppError) {
-        res.status(400).json({ success: false, message: error.userMessage });
-      } else {
-        res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+    // Get the pageNumber from query parameters
+    const pageNumber = parseInt(req.params.pageNumber as string, 10) || 0;
+    const limit = 8; // Number of categories per page
+
+    // Calculate the number of documents to skip
+    const skip = pageNumber * limit;
+
+    // Retrieve the categories with pagination
+    const categories = await categoriesCollection.find()
+      .skip(skip)
+      .limit(limit)
+      .toArray(); // Convert cursor to array
+    console.log(categories);
+    
+    // Get the total number of documents in the collection
+    const totalCategories = await categoriesCollection.countDocuments();
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalCategories / limit);
+
+    // Check if there are more categories
+    const isMore = (pageNumber + 1) * limit < totalCategories;
+
+    // Send the response with categories and pagination info
+    res.status(200).json({
+      success: true,
+      data: categories,
+      pagination: {
+        page: pageNumber,
+        isMore,
+        totalPages,
+        totalItems: totalCategories
       }
+    });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    if (error instanceof AppError) {
+      res.status(400).json({ success: false, message: error.userMessage });
+    } else {
+      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
     }
+  }
 };
 

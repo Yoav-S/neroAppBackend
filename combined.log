@@ -991,3 +991,46 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-07-27T11:34:37.699Z"}
 {"level":"info","message":"::1 - - [27/Jul/2024:11:34:39 +0000] \"POST /auth/login HTTP/1.1\" 200 417 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-27T11:34:39.999Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-07-27T11:35:40.354Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T13:07:10.122Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T13:07:10.127Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:13:07:11 +0000] \"POST /auth/signup HTTP/1.1\" 400 80 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T13:07:11.902Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:13:07:30 +0000] \"POST /auth/signup HTTP/1.1\" 200 113 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T13:07:30.217Z"}
+{"code":"ETIMEOUT","hostname":"_mongodb._tcp.nerocluster.rrwdhk0.mongodb.net","level":"error","message":"Error connecting to MongoDB: querySrv ETIMEOUT _mongodb._tcp.nerocluster.rrwdhk0.mongodb.net","stack":"Error: querySrv ETIMEOUT _mongodb._tcp.nerocluster.rrwdhk0.mongodb.net\n    at QueryReqWrap.onresolve [as oncomplete] (node:internal/dns/promises:291:17)","syscall":"querySrv","timestamp":"2024-07-30T13:09:32.544Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T13:09:53.425Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T13:09:53.429Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T13:10:33.935Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T13:10:33.940Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:13:10:41 +0000] \"POST /home/createPost HTTP/1.1\" 200 203 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T13:10:41.941Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T14:29:23.839Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T14:29:23.844Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:14:29:53 +0000] \"POST /auth/signup HTTP/1.1\" 201 1168 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T14:29:53.778Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T16:20:18.381Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T16:20:18.387Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T16:20:29.605Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T16:20:29.610Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:10:30.081Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:10:30.099Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:11:06 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 404 170 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:11:06.315Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:11:28.613Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:11:28.618Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:11:30 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 404 170 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:11:30.029Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:12:00.680Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:12:00.687Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:12:09 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:12:09.851Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:12:37 +0000] \"GET /home/getCategories/pageNumber=1 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:12:37.845Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:12:54 +0000] \"GET /home/getCategories/pageNumber=2 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:12:54.681Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:14:16.637Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:14:16.642Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:14:27 +0000] \"GET /home/getCategories/pageNumber=2 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:14:27.696Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:14:51 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:14:51.095Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:15:40.275Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:15:40.282Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:15:42 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:15:42.037Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:16:11.153Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:16:11.158Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-07-30T18:16:18.165Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-07-30T18:16:18.173Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:16:19 +0000] \"GET /home/getCategories/pageNumber=0 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:16:19.364Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:16:25 +0000] \"GET /home/getCategories/pageNumber=1 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:16:25.923Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:16:46 +0000] \"GET /home/getCategories/1 HTTP/1.1\" 200 147 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:16:46.720Z"}
+{"level":"info","message":"::1 - - [30/Jul/2024:18:17:09 +0000] \"GET /home/getCategories/0 HTTP/1.1\" 200 509 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-07-30T18:17:09.360Z"}

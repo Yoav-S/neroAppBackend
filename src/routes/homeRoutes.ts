@@ -4,7 +4,7 @@ import  upload  from '../config/multer';
 const router = express.Router();
 
 router.get('/getPostsPagination', getPostsPagination);
-router.get('/getCategories', getCategories)
+router.get('/getCategories/:pageNumber', getCategories)
 router.post('/createPost', upload.array('imagesUrl', 10), createPost); // Adjust field name and limit as needed
 
 export default router;

@@ -31,9 +31,13 @@ export const register = async (req: Request, res: Response) => {
 
     const userId = new mongoose.Types.ObjectId().toString();
 
-    // Construct the default profile picture URL
+    // Construct the default profile picture URL using Firebase Admin SDK
     const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
-    const defaultPictureUrl = `https://storage.googleapis.com/${bucket.name}/${defaultImagePath}`;
+    const file = bucket.file(defaultImagePath);
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: '03-09-2491',  // Set a long expiration date or adjust as needed
+    });
 
     const newUser = {
       email,
@@ -43,7 +47,7 @@ export const register = async (req: Request, res: Response) => {
       lastName,
       phone,
       userId,
-      picture: defaultPictureUrl,
+      picture: url,  // Use the signed URL for the profile picture
       createdAt: new Date(),
       updatedAt: new Date()
     };
