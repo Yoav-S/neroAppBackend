@@ -31,11 +31,9 @@ export const register = async (req: Request, res: Response) => {
 
     const userId = new mongoose.Types.ObjectId().toString();
 
-    // Download the default profile picture
+    // Construct the default profile picture URL
     const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
-    const file = bucket.file(defaultImagePath);
-    const [metadata] = await file.getMetadata();
-    const defaultPictureUrl = metadata.mediaLink;
+    const defaultPictureUrl = `https://storage.googleapis.com/${bucket.name}/${defaultImagePath}`;
 
     const newUser = {
       email,
@@ -70,6 +68,7 @@ export const register = async (req: Request, res: Response) => {
     }
   }
 };
+
 export const login = async (req: Request, res: Response) => {
   try {
     const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
