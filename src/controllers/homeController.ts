@@ -4,6 +4,7 @@ import { AppError, ErrorType, createAppError } from '../utils/errors';
 import PostModel from '../models/Post';
 import { bucket } from '../config/firebaseConfig';
 import mongoose, { Mongoose } from 'mongoose';
+const { ObjectId } = mongoose.Types;
 
 export const getPostsPagination = async (req: Request, res: Response) => {
   try {
@@ -61,91 +62,99 @@ export const getPostsPagination = async (req: Request, res: Response) => {
 };
 
 export const createPost = async (req: Request, res: Response) => {
-    console.log('arrived create post');
-  
-    try {
-      const { userId, userFirstName, userLastName, postType, title, category: categoryName, description, location } = req.body;
-      console.log('Request Body:', req.body);
-  
-      const images = req.files as Express.Multer.File[];
-      console.log('Images:', images);
-  
-      // Check if category exists or create a new one
-      const db = getDatabase();
-      const categoriesCollection = db.collection('categories');
-      let category = await categoriesCollection.findOne({ name: categoryName });
-      console.log('Category:', category);
-  
-      if (!category) {
-        const result = await categoriesCollection.insertOne({ name: categoryName });
-        category = result.insertedId ? { _id: result.insertedId } : null;
-        console.log('New Category Created:', category);
-      }
-  
-      if (!category) {
-        return res.status(500).json({ success: false, message: 'Failed to create or find category.' });
-      }
-  
-      // Create a new Post document
-      const newPost = {
-        userId: mongoose.Types.ObjectId.createFromHexString(userId),
-        userFirstName,
-        userLastName,
-        postType,
-        title,
-        category: category._id,
-        description,
-        imagesUrl: [] as string[],
-        location,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-  
-      // Insert the new post
-      const postsCollection = db.collection('posts');
-      const result = await postsCollection.insertOne(newPost);
-      const savedPost = result.insertedId ? { _id: result.insertedId, ...newPost } : null;
-  
-      if (!savedPost) {
-        return res.status(500).json({ success: false, message: 'Failed to create post.' });
-      }
-  
-      let imageUrls: string[] = [];
-  
-      // Handle image uploads
-      if (images && images.length > 0) {
-        for (const image of images) {
-          const uniqueFilename = `${savedPost._id}/${image.originalname}`;
-          const file = bucket.file(uniqueFilename);
-          await file.save(image.buffer, {
-            metadata: {
-              contentType: image.mimetype,
-            },
-            public: true,
-          });
-  
-          const fileUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-          imageUrls.push(fileUrl);
-        }
-        res.status(200).json({images: imageUrls});
-        // Update the post with the image URLs
-        await postsCollection.updateOne(
-          { _id: savedPost._id },
-          { $set: { imagesUrl: imageUrls } }
-        );
-  
-        savedPost.imagesUrl = imageUrls;
-      }
-  
-      res.status(201).json({
-        success: true,
-        message: 'Post created successfully',
-        post: savedPost
-      });
-    } catch (error) {
-      console.error('Error creating post:', error);
-      res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  console.log('arrived create post');
+
+  try {
+    const { userId, userFirstName, userLastName, postType, title, category: categoryName, description, location } = req.body;
+    console.log('Request Body:', req.body);
+
+    const images = req.files as Express.Multer.File[];
+    console.log('Images:', images);
+
+    // Check if category exists or create a new one
+    const db = getDatabase();
+    const userCollection = db.collection('users');
+    const categoriesCollection = db.collection('categories');
+    let category = await categoriesCollection.findOne({ name: categoryName });
+
+    if (!category) {
+      const result = await categoriesCollection.insertOne({ name: categoryName });
+      category = result.insertedId ? { _id: result.insertedId } : null;
     }
+
+    if (!category) {
+      return res.status(500).json({ success: false, message: 'Failed to create or find category.' });
+    }
+
+    let requiredUser = null;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      requiredUser = await userCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+    } else {
+      requiredUser = await userCollection.findOne({ userId: userId });
+    }
+    console.log('Required User:', requiredUser);
+    
+    // Create a new Post document
+    const newPost = {
+      userId: mongoose.Types.ObjectId.createFromHexString(userId),
+      userFirstName,
+      userLastName,
+      postType,
+      title,
+      category: category._id,
+      userProfilePicture: requiredUser?.picture,
+      description,
+      imagesUrl: [] as string[],
+      location,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Insert the new post
+    const postsCollection = db.collection('posts');
+    const result = await postsCollection.insertOne(newPost);
+    const savedPost = result.insertedId ? { _id: result.insertedId, ...newPost } : null;
+
+    if (!savedPost) {
+      return res.status(500).json({ success: false, message: 'Failed to create post.' });
+    }
+
+    let imageUrls: string[] = [];
+
+    // Handle image uploads
+    if (images && images.length > 0) {
+      for (const image of images) {
+        const uniqueFilename = `${savedPost._id}/${image.originalname}`;
+        const file = bucket.file(uniqueFilename);
+        await file.save(image.buffer, {
+          metadata: {
+            contentType: image.mimetype,
+          },
+          public: true,
+        });
+
+        const fileUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+        imageUrls.push(fileUrl);
+      }
+
+      // Update the post with the image URLs
+      await postsCollection.updateOne(
+        { _id: savedPost._id },
+        { $set: { imagesUrl: imageUrls } }
+      );
+
+      savedPost.imagesUrl = imageUrls;
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Post created successfully',
+      post: savedPost
+    });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
 };
 export const getCategories = async (req: Request, res: Response) => {
   console.log('arrived get categories');

@@ -10,6 +10,7 @@ export interface IPost extends Document {
   postType: 'Lost' | 'Found';
   title: string;
   category: mongoose.Types.ObjectId;
+  userProfilePicture: string;
   description: string;
   imagesUrl?: string[];
   location: {
@@ -34,6 +35,7 @@ const PostSchema: Schema = new Schema({
   updatedAt: { type: Date, default: Date.now },
   userFirstName: { type: String, required: true },
   userLastName: { type: String, required: true },
+  userProfilePicture: {type: String, required: true},
   postType: { type: String, enum: ['Lost', 'Found'], required: true },
   title: { type: String, required: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
