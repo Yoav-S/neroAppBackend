@@ -12,7 +12,7 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const categoriesCollection = db.collection('categories');
     
     // Get the page and limit from the query parameters
-    const page = parseInt(req.query.page as string, 10) || 1;
+    const page = parseInt(req.params.pageNumber as string, 10) || 1;
     const limit = 5;
     
     // Calculate the number of documents to skip
@@ -59,10 +59,7 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
-export const getCategoryPagination = async (req: Request, res: Response) => {
-  console.log('arrived category pagination');
-  
-}
+
 export const createPost = async (req: Request, res: Response) => {
     console.log('arrived create post');
   
