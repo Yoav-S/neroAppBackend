@@ -206,4 +206,83 @@ export const getCategories = async (req: Request, res: Response) => {
     }
   }
 };
+export const getCities = async (req: Request, res: Response) => {
+  console.log('arrived get cities');
 
+  try {
+    const db = getDatabase();
+    const citiesCollection = db.collection('cities');
+
+    const searchString = req.params.searchString as string;
+    console.log('Search string received:', searchString);
+
+    if (!searchString) {
+      throw createAppError("Search string is required.", ErrorType.VALIDATION);
+    }
+
+    const searchTerms = searchString.trim().toLowerCase().split(' ');
+    const firstSearchLetter = searchTerms[0][0]; // Get the first letter of the first search term
+    console.log('Search terms:', searchTerms);
+    console.log('First search letter:', firstSearchLetter);
+
+    const cityGroups = await citiesCollection.find({}).toArray();
+    console.log('City groups retrieved:', cityGroups.length);
+
+    let matchingCities: Array<{ name: string, startsWithSearchLetter: boolean }> = [];
+    cityGroups.forEach((document, index) => {
+      console.log(`Checking document ${index}`);
+      if (document.cityGroups && Array.isArray(document.cityGroups)) {
+        document.cityGroups.forEach(group => {
+          if (group.cities && Array.isArray(group.cities)) {
+            const groupMatches = group.cities.filter((city: { name: string; }) => {
+              if (typeof city !== 'object' || !city.name || typeof city.name !== 'string') {
+                console.log(`Warning: Invalid city object found:`, city);
+                return false;
+              }
+              return searchTerms.every(term => 
+                city.name.toLowerCase().includes(term)
+              );
+            }).map((city: { name: string; }) => ({
+              ...city,
+              startsWithSearchLetter: city.name.toLowerCase().startsWith(firstSearchLetter)
+            }));
+            console.log(`Found ${groupMatches.length} matches in group ${group.letter}`);
+            matchingCities = matchingCities.concat(groupMatches);
+          }
+        });
+      } else {
+        console.log(`Document ${index} has no cityGroups or cityGroups is not an array`);
+      }
+    });
+
+    // Sort the matching cities
+    matchingCities.sort((a, b) => {
+      if (a.startsWithSearchLetter && !b.startsWithSearchLetter) return -1;
+      if (!a.startsWithSearchLetter && b.startsWithSearchLetter) return 1;
+      return a.name.localeCompare(b.name); // Alphabetical order for ties
+    });
+
+    console.log('Total matching cities:', matchingCities.length);
+
+    if (matchingCities.length === 0) {
+      throw createAppError("No cities found matching the search criteria.", ErrorType.NOT_FOUND);
+    }
+
+    console.log('Matching cities:', matchingCities);
+
+    // Remove the startsWithSearchLetter property before sending the response
+    const responseData = matchingCities.map(({ name }) => ({ name }));
+
+    res.status(200).json({
+      success: true,
+      data: responseData
+    });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    if (error instanceof AppError) {
+      res.status(400).json({ success: false, message: error.userMessage });
+    } else {
+      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+    }
+  }
+};
