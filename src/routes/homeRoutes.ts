@@ -3,7 +3,7 @@ import { getPostsPagination, createPost, getCategories, getCities } from '../con
 import  upload  from '../config/multer';
 const router = express.Router();
 
-router.get('/getPostsPagination', getPostsPagination);
+router.post('/getPostsPagination', getPostsPagination);
 router.get('/getCategories/:pageNumber', getCategories)
 router.get('/getCities/:searchString', getCities);
 

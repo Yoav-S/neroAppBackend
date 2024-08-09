@@ -12,7 +12,7 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const categoriesCollection = db.collection('categories');
     console.log(req.body);
     // Destructure and provide default value for filters
-    const { pageNumber = 1, filters} = req.body;
+    const { pageNumber = 1, filters = {}} = req.body;
     console.log(filters);
 
     const page = parseInt(pageNumber as string, 10) || 1;
