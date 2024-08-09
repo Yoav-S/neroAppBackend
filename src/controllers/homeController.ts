@@ -165,6 +165,7 @@ export const createPost = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
+
 export const getCategories = async (req: Request, res: Response) => {
   console.log('arrived get categories');
   
@@ -179,13 +180,14 @@ export const getCategories = async (req: Request, res: Response) => {
     // Calculate the number of documents to skip
     const skip = pageNumber * limit;
 
-    // Retrieve the categories with pagination
-    const categories = await categoriesCollection.find()
+    // Retrieve only the category names with pagination
+    const categories = await categoriesCollection.find({}, { projection: { name: 1, _id: 0 } }) // Select only the 'name' field
       .skip(skip)
       .limit(limit)
       .toArray(); // Convert cursor to array
-    console.log(categories);
     
+    console.log(categories);
+
     // Get the total number of documents in the collection
     const totalCategories = await categoriesCollection.countDocuments();
 
@@ -195,10 +197,10 @@ export const getCategories = async (req: Request, res: Response) => {
     // Check if there are more categories
     const isMore = (pageNumber + 1) * limit < totalCategories;
 
-    // Send the response with categories and pagination info
+    // Send the response with category names and pagination info
     res.status(200).json({
       success: true,
-      data: categories,
+      data: categories.map(category => category.name), // Extract just the names
       pagination: {
         page: pageNumber,
         isMore,
@@ -215,6 +217,7 @@ export const getCategories = async (req: Request, res: Response) => {
     }
   }
 };
+
 export const getCities = async (req: Request, res: Response) => {
   console.log('arrived get cities');
 
