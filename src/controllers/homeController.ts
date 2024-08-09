@@ -200,7 +200,7 @@ export const getCategories = async (req: Request, res: Response) => {
     // Send the response with category names and pagination info
     res.status(200).json({
       success: true,
-      data: categories.map(category => category.name), // Extract just the names
+      data: categories.map(category => category.name), // Extract just the names as strings
       pagination: {
         page: pageNumber,
         isMore,
