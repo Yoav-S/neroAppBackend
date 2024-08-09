@@ -10,13 +10,15 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
-    const { pageNumber, filters } = req.body;
+    
+    // Destructure and provide default value for filters
+    const { pageNumber = 1, filters = {} } = req.body;
     console.log(filters);
 
     const page = parseInt(pageNumber as string, 10) || 1;
     const limit = 5;
 
-    // Create filter query
+    // Create filter query, handle undefined filters by passing an empty object
     const filterQuery = await createFilterQuery(filters, categoriesCollection);
 
     // Get the total number of documents that match the filter
@@ -67,6 +69,7 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
+
 export const createPost = async (req: Request, res: Response) => {
   console.log('arrived create post');
 
