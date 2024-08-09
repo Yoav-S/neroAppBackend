@@ -1205,3 +1205,15 @@
 {"level":"info","message":"::1 - - [09/Aug/2024:08:13:30 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:13:30.660Z"}
 {"level":"info","message":"::1 - - [09/Aug/2024:08:13:38 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:13:38.837Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-09T08:13:52.866Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-09T08:46:58.911Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-09T08:46:58.916Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:47:10 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:47:10.366Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:47:21 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 8660 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:47:21.905Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:47:26 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:47:26.203Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:47:30 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 8660 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:47:30.770Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:47:51 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:47:51.235Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:48:16 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:48:16.157Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:48:23 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:48:23.554Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:48:37 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:48:37.275Z"}
+{"level":"info","message":"::1 - - [09/Aug/2024:08:48:58 +0000] \"GET /home/getPostsPagination HTTP/1.1\" 200 8138 \"-\" \"PostmanRuntime/7.40.0\"","timestamp":"2024-08-09T08:48:58.156Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-09T08:53:20.885Z"}
