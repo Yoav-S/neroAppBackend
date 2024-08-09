@@ -10,9 +10,9 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
-    
+    console.log(req.body);
     // Destructure and provide default value for filters
-    const { pageNumber = 1, filters = {} } = req.body;
+    const { pageNumber = 1, filters} = req.body;
     console.log(filters);
 
     const page = parseInt(pageNumber as string, 10) || 1;
