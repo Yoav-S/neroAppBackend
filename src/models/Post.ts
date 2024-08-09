@@ -25,6 +25,7 @@ export interface IPost extends Document {
 const LocationSchema: Schema = new Schema({
   country: { type: String, required: true },
   city: { type: String, required: true },
+  district: { type: String },
   street: { type: String },
   number: { type: String }
 }, { _id: false });

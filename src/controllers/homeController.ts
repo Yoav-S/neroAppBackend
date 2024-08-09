@@ -1,49 +1,56 @@
 import { Request, Response } from 'express';
 import { getDatabase } from '../config/database';
 import { AppError, ErrorType, createAppError } from '../utils/errors';
-import PostModel from '../models/Post';
 import { bucket } from '../config/firebaseConfig';
-import mongoose, { Mongoose } from 'mongoose';
-const { ObjectId } = mongoose.Types;
-
+import mongoose from 'mongoose';
+import { Filters } from '../utils/interfaces';
+import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
-    
-    // Get the page and limit from the query parameters
-    const page = parseInt(req.params.pageNumber as string, 10) || 1;
+    const { pageNumber, filters } = req.body;
+    console.log(filters);
+
+    const page = parseInt(pageNumber as string, 10) || 1;
     const limit = 5;
-    
-    // Calculate the number of documents to skip
-    const skip = (page - 1) * limit;
-    
-    // Retrieve the posts with pagination
-    const posts = await postsCollection.find()
-      .sort({ createdAt: -1 }) // Sort by creation date, most recent first
-      .skip(skip)
-      .limit(limit)
-      .toArray(); // Convert cursor to array
-    
-    // Retrieve category names for each post
-    const categoryIds = posts.map(post => post.category);
-    const categories = await categoriesCollection.find({ _id: { $in: categoryIds } }).toArray();
-    
-    const categoryMap = new Map(categories.map(category => [category._id.toString(), category.name]));
-    
-    // Attach category names to posts
-    const postsWithCategoryNames = posts.map(post => ({
-      ...post,
-      category: categoryMap.get(post.category.toString()) || 'Unknown' // Default to 'Unknown' if category not found
-    }));
-    
-    // Get the total number of documents in the collection
-    const totalPosts = await postsCollection.countDocuments();
-    
+
+    // Create filter query
+    const filterQuery = await createFilterQuery(filters, categoriesCollection);
+
+    // Get the total number of documents that match the filter
+    const totalPosts = await postsCollection.countDocuments(filterQuery);
+
     // Calculate the total number of pages
     const totalPages = Math.ceil(totalPosts / limit);
-    const isMore: boolean = page !== totalPages;
+
+    // Retrieve all posts that match the filter
+    const allFilteredPosts = await postsCollection.find(filterQuery)
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    // Calculate the start and end indices for the current page
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+
+    // Slice the posts array to get the posts for the current page
+    const postsForCurrentPage = allFilteredPosts.slice(startIndex, endIndex);
+
+    // Retrieve category names for each post
+    const categoryIds = postsForCurrentPage.map(post => post.category);
+    const categories = await categoriesCollection.find({ _id: { $in: categoryIds } }).toArray();
+
+    const categoryMap = new Map(categories.map(category => [category._id.toString(), category.name]));
+
+    // Attach category names to posts
+    const postsWithCategoryNames = postsForCurrentPage.map(post => ({
+      ...post,
+      category: categoryMap.get(post.category.toString()) || 'Unknown'
+    }));
+
+    const isMore: boolean = page < totalPages;
+
     // Send the response with the posts and pagination info
     res.status(200).json({
       success: true,
@@ -60,7 +67,6 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
-
 export const createPost = async (req: Request, res: Response) => {
   console.log('arrived create post');
 
@@ -286,3 +292,5 @@ export const getCities = async (req: Request, res: Response) => {
     }
   }
 };
+
+
