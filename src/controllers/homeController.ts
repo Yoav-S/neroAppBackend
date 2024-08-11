@@ -11,11 +11,12 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
     console.log(req.body);
+
     // Destructure and provide default value for filters
-    const { pageNumber = 1, filters = {}} = req.body;
+    const { pageNumber = 0, filters = {}} = req.body;
     console.log(filters);
 
-    const page = parseInt(pageNumber as string, 10) || 1;
+    const page = parseInt(pageNumber as string, 10) || 0;
     const limit = 5;
 
     // Create filter query, handle undefined filters by passing an empty object
@@ -27,17 +28,15 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     // Calculate the total number of pages
     const totalPages = Math.ceil(totalPosts / limit);
 
-    // Retrieve all posts that match the filter
-    const allFilteredPosts = await postsCollection.find(filterQuery)
+    // Calculate the number of documents to skip
+    const skip = page * limit;
+
+    // Retrieve posts that match the filter with pagination
+    const postsForCurrentPage = await postsCollection.find(filterQuery)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .toArray();
-
-    // Calculate the start and end indices for the current page
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-
-    // Slice the posts array to get the posts for the current page
-    const postsForCurrentPage = allFilteredPosts.slice(startIndex, endIndex);
 
     // Retrieve category names for each post
     const categoryIds = postsForCurrentPage.map(post => post.category);
@@ -51,7 +50,7 @@ export const getPostsPagination = async (req: Request, res: Response) => {
       category: categoryMap.get(post.category.toString()) || 'Unknown'
     }));
 
-    const isMore: boolean = page < totalPages;
+    const isMore: boolean = (page + 1) * limit < totalPosts;
 
     // Send the response with the posts and pagination info
     res.status(200).json({
