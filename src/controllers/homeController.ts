@@ -12,15 +12,19 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const categoriesCollection = db.collection('categories');
     console.log(req.body);
 
-    // Destructure and provide default value for filters
-    const { pageNumber = 0, filters = {}} = req.body;
+    // Destructure and provide default values
+    const { pageNumber = 0, filters = null } = req.body;
     console.log(filters);
 
     const page = parseInt(pageNumber as string, 10) || 0;
     const limit = 5;
 
-    // Create filter query, handle undefined filters by passing an empty object
-    const filterQuery = await createFilterQuery(filters, categoriesCollection);
+    let filterQuery = {};
+
+    // Only create filter query if filters are not null
+    if (filters !== null) {
+      filterQuery = await createFilterQuery(filters, categoriesCollection);
+    }
 
     // Get the total number of documents that match the filter
     const totalPosts = await postsCollection.countDocuments(filterQuery);
