@@ -16,7 +16,7 @@ export const loginAsAGuest = async (req: Request, res: Response) => {
     // Create a new guest document
     const guestUser = {
       guestId: guestId,
-      role: 'GUEST',
+      role: 'guest',
       createdAt: new Date(),
       lastAccessedAt: new Date(),
     };
