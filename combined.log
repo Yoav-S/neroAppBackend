@@ -1233,3 +1233,36 @@
 {"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T08:41:55.794Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T08:41:55.801Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T08:43:32.611Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:17:19.793Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:17:19.798Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:18:00.392Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:18:00.397Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:18:08 +0000] \"POST /home/createPost HTTP/1.1\" 401 65 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:18:08.419Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:18:51 +0000] \"POST /auth/login HTTP/1.1\" 200 998 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:18:51.418Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:19:06 +0000] \"POST /home/createPost HTTP/1.1\" 201 1551 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:19:06.834Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:19:46.574Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:21:18.069Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:21:18.074Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:21:22.106Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:43:14.948Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:43:14.953Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:43:47 +0000] \"POST /home/createPost HTTP/1.1\" 201 1550 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:43:47.900Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:44:19.674Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:47:34.881Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:47:34.887Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:47:38 +0000] \"POST /home/createPost HTTP/1.1\" 201 1646 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:47:38.886Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:47:46.981Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:48:26.181Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:48:26.186Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:48:28.244Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:49:16.280Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:49:16.288Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:49:20 +0000] \"POST /home/createPost HTTP/1.1\" 201 1647 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:49:20.925Z"}
+{"level":"info","message":"::1 - - [17/Aug/2024:10:49:39 +0000] \"POST /home/createPost HTTP/1.1\" 201 1647 \"-\" \"PostmanRuntime/7.41.1\"","timestamp":"2024-08-17T10:49:39.822Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:49:46.150Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:50:52.318Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:50:52.323Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:50:54.650Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-17T10:51:11.077Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-17T10:51:11.083Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-17T10:51:18.442Z"}

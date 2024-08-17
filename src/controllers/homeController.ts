@@ -139,8 +139,11 @@ export const deletePost = async (req: Request, res: Response) => {
   }
 };
 export const createPost = async (req: Request, res: Response) => {
-  console.log('arrived create post');
+  const authHeader = req.headers.authorization;
 
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
+  }
   try {
     const { userId, userFirstName, userLastName, postType, title, category: categoryName, description, location } = req.body;
     console.log('Request Body:', req.body);
