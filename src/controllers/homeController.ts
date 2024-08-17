@@ -4,6 +4,8 @@ import { AppError, ErrorType, createAppError } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
 import { Filters } from '../utils/interfaces';
+import jwt from 'jsonwebtoken'
+
 import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
   try {
@@ -72,10 +74,70 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
-export const deletePost = (req: Request, res: Response) => {
-  const {postId, userId} = req.body;
-  res.status(200).json({postId, userId});
-}
+export const deletePost = async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+
+  // Validate Bearer token
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    const { postId } = req.body;
+    const userId = decodedToken.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ success: false, message: 'Invalid post ID.' });
+    }
+
+    const db = getDatabase();
+    const postsCollection = db.collection('posts');
+
+    // Find the post by ID
+    const post = await postsCollection.findOne({ _id:  mongoose.Types.ObjectId.createFromHexString(postId) });
+
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found.' });
+    }
+
+    // Validate if the user has permission to delete the post
+    if (post.userId.toString() !== userId) {
+      return res.status(403).json({ success: false, message: 'Unauthorized action.' });
+    }
+
+    // Delete associated images from Firebase Storage
+    if (post.imagesUrl && post.imagesUrl.length > 0) {
+      for (const imageUrl of post.imagesUrl) {
+        const filePath = imageUrl.replace(`https://storage.googleapis.com/${bucket.name}/`, '');
+        const file = bucket.file(filePath);
+
+        try {
+          await file.delete();
+        } catch (error) {
+          console.error(`Failed to delete image: ${imageUrl}`, error);
+        }
+      }
+    }
+
+    // Delete the post from the collection
+    const deleteResult = await postsCollection.deleteOne({ _id: new mongoose.Types.ObjectId(postId) });
+
+    if (deleteResult.deletedCount === 0) {
+      return res.status(500).json({ success: false, message: 'Failed to delete the post.' });
+    }
+
+    res.status(200).json({ success: true, message: 'Post deleted successfully.' });
+  } catch (error: any) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(403).json({ success: false, message: 'Token is invalid or expired.' });
+    }
+    console.error('Error deleting post:', error);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+};
 export const createPost = async (req: Request, res: Response) => {
   console.log('arrived create post');
 
@@ -103,7 +165,7 @@ export const createPost = async (req: Request, res: Response) => {
 
     let requiredUser = null;
     if (mongoose.Types.ObjectId.isValid(userId)) {
-      requiredUser = await userCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+      requiredUser = await userCollection.findOne({ _id:  mongoose.Types.ObjectId.createFromHexString(userId) });
     } else {
       requiredUser = await userCollection.findOne({ userId: userId });
     }
