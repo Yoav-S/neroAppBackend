@@ -6,7 +6,7 @@ const router = express.Router();
 router.post('/getPostsPagination', getPostsPagination);
 router.get('/getCategories/:pageNumber', getCategories)
 router.get('/getCities/:searchString', getCities);
-router.get('/deletePost', deletePost);
+router.post('/deletePost', deletePost);
 
 router.post('/createPost', upload.array('imagesUrl', 10), createPost); // Adjust field name and limit as needed
 
