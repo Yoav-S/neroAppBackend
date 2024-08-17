@@ -72,7 +72,10 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
-
+export const deletePost = (req: Request, res: Response) => {
+  const {postId, userId} = req.body;
+  res.status(200).json({postId, userId});
+}
 export const createPost = async (req: Request, res: Response) => {
   console.log('arrived create post');
 
