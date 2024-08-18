@@ -6,6 +6,7 @@ dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
 export const ENV = {
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASS: process.env.EMAIL_PASS,
+  EMAIL_SUPPORT: process.env.EMAIL_SUPPORT,
   JWT_SECRET: process.env.JWT_SECRET,
   PORT: process.env.PORT,
   MONGODB_URI: process.env.MONGODB_URI,

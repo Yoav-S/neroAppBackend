@@ -32,12 +32,34 @@ export class AppError extends Error {
 export function createAppError(message: string, type: ErrorType): AppError {
     return new AppError(message, type);
 }
-
+// Helper function to map ErrorType to HTTP status codes
+export function getStatusCodeForErrorType(errorType: ErrorType): number {
+    switch (errorType) {
+      case ErrorType.AUTHENTICATION:
+        return 401;
+      case ErrorType.AUTHORIZATION:
+        return 403;
+      case ErrorType.VALIDATION:
+      case ErrorType.INPUT_ERROR:
+        return 400;
+      case ErrorType.NOT_FOUND:
+        return 404;
+      case ErrorType.SERVER_ERROR:
+      case ErrorType.INTERNAL_SERVER_ERROR:
+      case ErrorType.DatabaseError:
+        return 500;
+      case ErrorType.NETWORK_ERROR:
+      case ErrorType.EXTERNAL_SERVICE_ERROR:
+        return 503;
+      default:
+        return 500;
+    }
+  }
 // Function to get user-friendly error messages based on ErrorType
 export function getUserFriendlyMessage(type: ErrorType): string {
     switch (type) {
         case ErrorType.AUTHENTICATION:
-            return "Oops! Email or password incorrect Please, try another one.";
+            return "Authentication required. Please log in.";
         case ErrorType.AUTHORIZATION:
             return "You don't have permission to perform this action.";
         case ErrorType.VALIDATION:

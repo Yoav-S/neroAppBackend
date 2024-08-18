@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { getDatabase } from '../config/database';
-import { AppError, ErrorType, createAppError } from '../utils/errors';
+import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
 import { Filters } from '../utils/interfaces';
 import jwt from 'jsonwebtoken'
+import nodemailer from 'nodemailer'
+import { ENV } from '../config/env';
 
 import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
@@ -77,35 +79,34 @@ export const getPostsPagination = async (req: Request, res: Response) => {
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
 
-  // Validate Bearer token
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
   try {
+    // Validate Bearer token
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw createAppError('Access token is missing or invalid.', ErrorType.AUTHENTICATION);
+    }
+
+    const token = authHeader.split(' ')[1];
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
     const { postId } = req.body;
     const userId = decodedToken.userId;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(400).json({ success: false, message: 'Invalid post ID.' });
+      throw createAppError('Invalid post ID.', ErrorType.VALIDATION);
     }
 
     const db = getDatabase();
     const postsCollection = db.collection('posts');
 
     // Find the post by ID
-    const post = await postsCollection.findOne({ _id:  mongoose.Types.ObjectId.createFromHexString(postId) });
+    const post = await postsCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
 
     if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found.' });
+      throw createAppError('Post not found.', ErrorType.NOT_FOUND);
     }
 
     // Validate if the user has permission to delete the post
     if (post.userId.toString() !== userId) {
-      return res.status(403).json({ success: false, message: 'Unauthorized action.' });
+      throw createAppError('Unauthorized action.', ErrorType.AUTHORIZATION);
     }
 
     // Delete associated images from Firebase Storage
@@ -118,6 +119,7 @@ export const deletePost = async (req: Request, res: Response) => {
           await file.delete();
         } catch (error) {
           console.error(`Failed to delete image: ${imageUrl}`, error);
+          // Consider whether this should throw an error or just log it
         }
       }
     }
@@ -126,16 +128,110 @@ export const deletePost = async (req: Request, res: Response) => {
     const deleteResult = await postsCollection.deleteOne({ _id: new mongoose.Types.ObjectId(postId) });
 
     if (deleteResult.deletedCount === 0) {
-      return res.status(500).json({ success: false, message: 'Failed to delete the post.' });
+      throw createAppError('Failed to delete the post.', ErrorType.DatabaseError);
     }
 
     res.status(200).json({ success: true, message: 'Post deleted successfully.' });
   } catch (error: any) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(403).json({ success: false, message: 'Token is invalid or expired.' });
+    if (error instanceof AppError) {
+      return res.status(getStatusCodeForErrorType(error.type)).json({
+        success: false,
+        message: error.userMessage,
+      });
+    } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(403).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.AUTHENTICATION),
+      });
+    } else {
+      console.error('Error deleting post:', error);
+      return res.status(500).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR),
+      });
     }
-    console.error('Error deleting post:', error);
-    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+};
+
+
+export const reportPost = async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+
+  try {
+    // Validate Bearer token
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw createAppError('Access token is missing or invalid.', ErrorType.AUTHENTICATION);
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    const { postId } = req.body;
+    const userId = decodedToken.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      throw createAppError('Invalid post ID.', ErrorType.VALIDATION);
+    }
+
+    const db = getDatabase();
+    const postsCollection = db.collection('posts');
+    const usersCollection = db.collection('users');
+
+    // Find the post by ID
+    const post = await postsCollection.findOne({ _id: new mongoose.Types.ObjectId(postId) });
+
+    if (!post) {
+      throw createAppError('Post not found.', ErrorType.NOT_FOUND);
+    }
+
+    // Find the user by ID to get their email
+    const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+
+    if (!user || !user.email) {
+      throw createAppError('User not found or email not available.', ErrorType.NOT_FOUND);
+    }
+
+    // Set up email transporter
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: ENV.EMAIL_USER,
+        pass: ENV.EMAIL_PASS
+      }
+    });
+
+    // Prepare email content
+    const mailOptions = {
+      from: ENV.EMAIL_USER, // Use the application's email as the sender
+      to: ENV.EMAIL_SUPPORT,
+      subject: 'Post Report',
+      text: `A post has been reported.\n\nPost ID: ${postId}\nReported by User ID: ${userId}\nReporter's Email: ${user.email}`,
+      html: `<h2>Post Report</h2><p>A post has been reported.</p><p><strong>Post ID:</strong> ${postId}</p><p><strong>Reported by User ID:</strong> ${userId}</p><p><strong>Reporter's Email:</strong> ${user.email}</p>`
+    };
+
+    // Send the email
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ success: true, message: 'Post reported successfully.' });
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      return res.status(getStatusCodeForErrorType(error.type)).json({
+        success: false,
+        message: error.userMessage,
+      });
+    } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(403).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.AUTHENTICATION),
+      });
+    } else {
+      console.error('Error reporting post:', error);
+      return res.status(500).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR),
+      });
+    }
   }
 };
 export const createPost = async (req: Request, res: Response) => {
