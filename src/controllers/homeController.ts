@@ -9,7 +9,6 @@ import { ENV } from '../config/env';
 
 import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
-  console.log('arrived get psot pagination');
   
   try {
     const db = getDatabase();
@@ -115,7 +114,7 @@ export const deletePost = async (req: Request, res: Response) => {
     }
 
     // Delete the post from the collection
-    const deleteResult = await postsCollection.deleteOne({ _id: new mongoose.Types.ObjectId(postId) });
+    const deleteResult = await postsCollection.deleteOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
 
     if (deleteResult.deletedCount === 0) {
       throw createAppError('Failed to delete the post.', ErrorType.DatabaseError);
