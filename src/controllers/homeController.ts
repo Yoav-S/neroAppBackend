@@ -9,6 +9,8 @@ import { ENV } from '../config/env';
 
 import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
+  console.log('arrived get psot pagination');
+  
   try {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
@@ -45,24 +47,13 @@ export const getPostsPagination = async (req: Request, res: Response) => {
       .limit(limit)
       .toArray();
 
-    // Retrieve category names for each post
-    const categoryIds = postsForCurrentPage.map(post => post.category);
-    const categories = await categoriesCollection.find({ _id: { $in: categoryIds } }).toArray();
-
-    const categoryMap = new Map(categories.map(category => [category._id.toString(), category.name]));
-
-    // Attach category names to posts
-    const postsWithCategoryNames = postsForCurrentPage.map(post => ({
-      ...post,
-      category: categoryMap.get(post.category.toString()) || 'Unknown'
-    }));
 
     const isMore: boolean = (page + 1) * limit < totalPosts;
 
     // Send the response with the posts and pagination info
     res.status(200).json({
       success: true,
-      data: postsWithCategoryNames,
+      data: postsForCurrentPage,
       pagination: {
         isMore,
         page,
