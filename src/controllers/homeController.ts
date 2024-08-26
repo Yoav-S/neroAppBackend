@@ -3,7 +3,6 @@ import { getDatabase } from '../config/database';
 import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
-import { Filters } from '../utils/interfaces';
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import { ENV } from '../config/env';
@@ -236,58 +235,49 @@ export const reportPost = async (req: Request, res: Response) => {
 };
 export const createPost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-
+  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
   }
+
   try {
-    const { userId, userFirstName, userLastName, postType, title, category: categoryName, description, location } = req.body;
+    const { userId, postType, title, description, userFirstName, userLastName, location } = req.body;
     console.log('Request Body:', req.body);
+
+    // Check for required fields
+    if (!postType || !title || !description) {
+      return res.status(400).json({ success: false, message: 'postType, title, and description are required fields.' });
+    }
 
     const images = req.files as Express.Multer.File[];
     console.log('Images:', images);
 
-    // Check if category exists or create a new one
     const db = getDatabase();
     const userCollection = db.collection('users');
-    const categoriesCollection = db.collection('categories');
-    let category = await categoriesCollection.findOne({ name: categoryName });
+    const postsCollection = db.collection('posts');
 
-    if (!category) {
-      const result = await categoriesCollection.insertOne({ name: categoryName });
-      category = result.insertedId ? { _id: result.insertedId } : null;
-    }
-
-    if (!category) {
-      return res.status(500).json({ success: false, message: 'Failed to create or find category.' });
-    }
-
-    let requiredUser = null;
-    if (mongoose.Types.ObjectId.isValid(userId)) {
-      requiredUser = await userCollection.findOne({ _id:  mongoose.Types.ObjectId.createFromHexString(userId) });
-    } else {
-      requiredUser = await userCollection.findOne({ userId: userId });
-    }
-    console.log('Required User:', requiredUser);
-    
     // Create a new Post document
-    const newPost = {
+    const newPost: any = {
       userId: mongoose.Types.ObjectId.createFromHexString(userId),
-      userFirstName,
-      userLastName,
+      userFirstName: userFirstName,
+      userLastName: userLastName,
       postType,
       title,
-      category: category._id,
-      userProfilePicture: requiredUser?.picture,
       description,
-      imagesUrl: [] as string[],
-      location,
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    if (location) newPost.location = location;
+
+    // Handle category if provided
+
+    // Get user profile picture if available
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const requiredUser = await userCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(userId) });
+      if (requiredUser?.picture) newPost.userProfilePicture = requiredUser.picture;
+    }
 
     // Insert the new post
-    const postsCollection = db.collection('posts');
     const result = await postsCollection.insertOne(newPost);
     const savedPost = result.insertedId ? { _id: result.insertedId, ...newPost } : null;
 
