@@ -95,7 +95,7 @@ export const login = async (req: Request, res: Response) => {
       throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1m' });
     user.token = token;
     const userWithoutSensitiveInfo = {
       _id: user._id,
