@@ -1,11 +1,11 @@
 import express from 'express';
-import { getUserById, login, register, sendEmailOTP, resetPassword, otpVerification, loginWithGoogle } from '../controllers/authController';
+import { getUserById, login, register, sendEmailOTP, resetPassword, otpVerification, loginWithGoogle, getNewTokenById } from '../controllers/authController';
 
 const router = express.Router();
 
 router.post('/login', login);
 router.post('/loginWithGoogle', loginWithGoogle);
-
+router.post('/getNewTokenById', getNewTokenById)
 router.post('/signup', register);
 router.post('/resetPassword', resetPassword);
 router.post('/sendEmailOTP/:email', sendEmailOTP);

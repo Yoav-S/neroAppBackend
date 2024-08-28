@@ -7,7 +7,7 @@ import nodemailer from 'nodemailer'
 import { bucket } from '../config/firebaseConfig';
 import otpGenerator from 'otp-generator';
 import { ENV } from '../config/env';
-import { AppError, ErrorType, createAppError, getUserFriendlyMessage } from '../utils/errors';
+import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { Types } from 'mongoose';
 import { IUser, IUserCreate } from '../models/User';
 export const register = async (req: Request, res: Response) => {
@@ -273,6 +273,49 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+export const getNewTokenById = async (req: Request, res: Response) => {
+  const { userId } = req.body;
+  const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
+  const usersCollection = db.collection('users');
+
+  try {
+    if (!userId) {
+      throw createAppError('User ID is required', ErrorType.VALIDATION);
+    }
+
+    // Generate a new JWT token
+    const newToken = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+
+    // Fetch user data from the database
+    const user = await usersCollection.findOne({ _id: userId });
+
+    if (!user) {
+      throw createAppError('User not found', ErrorType.NOT_FOUND);
+    }
+
+    // Send the new token and user details
+    res.json({
+      success: true,
+      token: newToken,
+      user
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      const statusCode = getStatusCodeForErrorType(error.type);
+      res.status(statusCode).json({
+        success: false,
+        error: error.userMessage
+      });
+    } else {
+      // Handle unexpected errors
+      console.error('Unexpected error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error'
+      });
+    }
+  }
+};
 export const otpVerification = async (req: Request, res: Response) => {
   try {
     const { otp, userId } = req.body;
