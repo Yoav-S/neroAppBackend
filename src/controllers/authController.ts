@@ -74,6 +74,8 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
+  console.log(req.body);
+  
   try {
     const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
     const usersCollection = db.collection('users');
@@ -154,7 +156,6 @@ export const getUserById = async (req: Request, res: Response) => {
       });
     });
   } catch (error) {
-    console.error('Error fetching user data:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage });
     } else {
