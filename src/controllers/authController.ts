@@ -97,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
       throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1m' });
+    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
     user.token = token;
     const userWithoutSensitiveInfo = {
       _id: user._id,
@@ -129,31 +129,25 @@ export const getUserById = async (req: Request, res: Response) => {
     const db = getDatabase();
     const usersCollection = db.collection('users');
     const userId = req.params.userId.trim();
-    const token = req.headers.authorization?.split(' ')[1];
 
-    if (!token) {
-      throw createAppError("No token provided", ErrorType.AUTHENTICATION);
+    const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+    
+    if (!user) {
+      throw createAppError("User not found", ErrorType.NOT_FOUND);
     }
 
-    jwt.verify(token, ENV.JWT_SECRET || '', async (err: any, decoded: any) => {
-      if (err) {
-        throw createAppError("Invalid token", ErrorType.AUTHENTICATION);
-      }
+    // Generate a new token
+    const newToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      ENV.JWT_SECRET || '',
+      { expiresIn: '1h' } // Adjust expiration time as needed
+    );
 
-      if (decoded.userId !== userId) {
-        throw createAppError("Unauthorized access", ErrorType.AUTHORIZATION);
-      }
-
-      const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
-      if (!user) {
-        throw createAppError("User not found", ErrorType.NOT_FOUND);
-      }
-
-      res.status(200).json({
-        success: true,
-        message: 'Successfully found user',
-        user
-      });
+    res.status(200).json({
+      success: true,
+      message: 'Successfully found user',
+      user,
+      token: newToken
     });
   } catch (error) {
     if (error instanceof AppError) {
