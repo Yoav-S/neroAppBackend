@@ -97,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
       throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+    const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1m' });
     user.token = token;
     const userWithoutSensitiveInfo = {
       _id: user._id,
@@ -141,7 +141,7 @@ export const getUserById = async (req: Request, res: Response) => {
     const newToken = jwt.sign(
       { userId: user._id, role: user.role },
       ENV.JWT_SECRET || '',
-      { expiresIn: '1h' } // Adjust expiration time as needed
+      { expiresIn: '1m' } // Adjust expiration time as needed
     );
 
     res.status(200).json({
@@ -280,7 +280,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     }
 
     // Generate a new JWT token
-    const newToken = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+    const newToken = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1m' });
 
     // Fetch user data from the database
     const user = await usersCollection.findOne({ _id: userId });
