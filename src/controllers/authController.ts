@@ -143,11 +143,20 @@ export const getUserById = async (req: Request, res: Response) => {
       ENV.JWT_SECRET || '',
       { expiresIn: '1m' } // Adjust expiration time as needed
     );
-
+    const userWithoutSensitiveInfo = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      picture: user.picture,
+      createdAt: user.createdAt
+    };
     res.status(200).json({
       success: true,
       message: 'Successfully found user',
-      user,
+      userWithoutSensitiveInfo,
       token: newToken
     });
   } catch (error) {
@@ -288,12 +297,21 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     if (!user) {
       throw createAppError('User not found', ErrorType.NOT_FOUND);
     }
-
+    const userWithoutSensitiveInfo = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      picture: user.picture,
+      createdAt: user.createdAt
+    };
     // Send the new token and user details
     res.json({
       success: true,
       token: newToken,
-      user
+      userWithoutSensitiveInfo
     });
   } catch (error) {
     if (error instanceof AppError) {
