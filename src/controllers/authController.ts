@@ -270,8 +270,8 @@ export const resetPassword = async (req: Request, res: Response) => {
 };
 
 export const getNewTokenById = async (req: Request, res: Response) => {
-  const { userId } = req.body;
-  const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
+  const userId = req.params.userId.trim();
+    const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
   const usersCollection = db.collection('users');
 
   try {
@@ -283,7 +283,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     const newToken = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1m' });
 
     // Fetch user data from the database
-    const user = await usersCollection.findOne({ _id: userId });
+    const user = await usersCollection.findOne({ userId });
 
     if (!user) {
       throw createAppError('User not found', ErrorType.NOT_FOUND);

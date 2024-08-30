@@ -1339,3 +1339,28 @@
 {"level":"info","message":"::1 - - [29/Aug/2024:14:44:30 +0000] \"POST /auth/login HTTP/1.1\" 200 998 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-29T14:44:30.780Z"}
 {"level":"info","message":"::1 - - [29/Aug/2024:14:44:44 +0000] \"GET /auth/getUserById/66845193ecacaecf8674d498%0A HTTP/1.1\" 200 1155 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-29T14:44:44.107Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-29T15:01:25.276Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:02:49.135Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:02:49.140Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:02:54 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 184 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:02:54.322Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:04:45.194Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:04:45.198Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:04:54 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 184 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:04:54.411Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:04:55 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 184 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:04:55.643Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:06:11.038Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:06:11.043Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:06:11 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:06:11.979Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:06:13 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:06:13.707Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:07:43.155Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:07:43.159Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:44 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:44.086Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:45 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:45.198Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:46 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:46.273Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:47 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:47.315Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:47 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:47.906Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:07:48 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 404 73 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:07:48.793Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:08:12.825Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:08:12.829Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-08-30T09:08:43.740Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:08:43.744Z"}
+{"level":"info","message":"::1 - - [30/Aug/2024:09:08:44 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 200 1306 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:08:44.456Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-30T09:09:10.304Z"}

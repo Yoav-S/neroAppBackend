@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post('/login', login);
 router.post('/loginWithGoogle', loginWithGoogle);
-router.post('/getNewTokenById', getNewTokenById)
+router.get('/getNewTokenById/:userId', getNewTokenById)
 router.post('/signup', register);
 router.post('/resetPassword', resetPassword);
 router.post('/sendEmailOTP/:email', sendEmailOTP);
