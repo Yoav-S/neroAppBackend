@@ -5,13 +5,10 @@ import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
-import { ENV } from '../config/env';
-
 import { createFilterQuery } from '../utils/functions';
 export const getPostsPagination = async (req: Request, res: Response) => {
-  
   try {
-    const db = getDatabase();
+    const db = getDatabase(); // Assuming getDatabase is available
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
     console.log(req.body);
@@ -46,7 +43,6 @@ export const getPostsPagination = async (req: Request, res: Response) => {
       .limit(limit)
       .toArray();
 
-
     const isMore: boolean = (page + 1) * limit < totalPosts;
 
     // Send the response with the posts and pagination info
@@ -61,10 +57,14 @@ export const getPostsPagination = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error retrieving posts:', error);
-    res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+    res.status(500).json({
+      success: false,
+      message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR)
+    });
   }
 };
+
+
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
 
@@ -83,7 +83,7 @@ export const deletePost = async (req: Request, res: Response) => {
       throw createAppError('Invalid post ID.', ErrorType.VALIDATION);
     }
 
-    const db = getDatabase();
+    const db = getDatabase(); // Assuming `getDatabase` is available
     const postsCollection = db.collection('posts');
 
     // Find the post by ID
@@ -128,19 +128,19 @@ export const deletePost = async (req: Request, res: Response) => {
         message: error.userMessage,
       });
     } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(403).json({
+      return res.status(getStatusCodeForErrorType(ErrorType.AUTHENTICATION)).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.AUTHENTICATION),
       });
     } else {
-      console.error('Error deleting post:', error);
-      return res.status(500).json({
+      return res.status(getStatusCodeForErrorType(ErrorType.INTERNAL_SERVER_ERROR)).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR),
       });
     }
   }
 };
+
 
 
 export const reportPost = async (req: Request, res: Response) => {
@@ -185,15 +185,15 @@ export const reportPost = async (req: Request, res: Response) => {
       port: 587,
       secure: false,
       auth: {
-        user: ENV.EMAIL_USER,
-        pass: ENV.EMAIL_PASS
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
       }
     });
 
     // Prepare email content
     const mailOptions = {
-      from: ENV.EMAIL_USER, // Use the application's email as the sender
-      to: ENV.EMAIL_SUPPORT,
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_SUPPORT,
       subject: 'Post Report',
       text: `A post has been reported.\n\nPost ID: ${postId}\nReported by User ID: ${userId}\nReporter's Email: ${user.email}`,
       html: `<h2>Post Report</h2><p>A post has been reported.</p><p><strong>Post ID:</strong> ${postId}</p><p><strong>Reported by User ID:</strong> ${userId}</p><p><strong>Reporter's Email:</strong> ${user.email}</p>`
@@ -210,13 +210,12 @@ export const reportPost = async (req: Request, res: Response) => {
         message: error.userMessage,
       });
     } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(403).json({
+      return res.status(getStatusCodeForErrorType(ErrorType.AUTHENTICATION)).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.AUTHENTICATION),
       });
     } else {
-      console.error('Error reporting post:', error);
-      return res.status(500).json({
+      return res.status(getStatusCodeForErrorType(ErrorType.INTERNAL_SERVER_ERROR)).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR),
       });
@@ -225,9 +224,10 @@ export const reportPost = async (req: Request, res: Response) => {
 };
 export const createPost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
+    return res.status(getStatusCodeForErrorType(ErrorType.AUTHENTICATION))
+      .json({ success: false, message: 'Access token is missing or invalid.' });
   }
 
   try {
@@ -236,7 +236,7 @@ export const createPost = async (req: Request, res: Response) => {
 
     // Check for required fields
     if (!postType || !title || !description) {
-      return res.status(400).json({ success: false, message: 'postType, title, and description are required fields.' });
+      throw createAppError('postType, title, and description are required fields.', ErrorType.VALIDATION);
     }
 
     const images = req.files as Express.Multer.File[];
@@ -259,8 +259,6 @@ export const createPost = async (req: Request, res: Response) => {
     };
     if (location) newPost.location = location;
 
-    // Handle category if provided
-
     // Get user profile picture if available
     if (mongoose.Types.ObjectId.isValid(userId)) {
       const requiredUser = await userCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(userId) });
@@ -272,7 +270,7 @@ export const createPost = async (req: Request, res: Response) => {
     const savedPost = result.insertedId ? { _id: result.insertedId, ...newPost } : null;
 
     if (!savedPost) {
-      return res.status(500).json({ success: false, message: 'Failed to create post.' });
+      throw createAppError('Failed to create post.', ErrorType.INTERNAL_SERVER_ERROR);
     }
 
     let imageUrls: string[] = [];
@@ -282,6 +280,7 @@ export const createPost = async (req: Request, res: Response) => {
       for (const image of images) {
         const uniqueFilename = `${savedPost._id}/${image.originalname}`;
         const file = bucket.file(uniqueFilename);
+
         await file.save(image.buffer, {
           metadata: {
             contentType: image.mimetype,
@@ -308,14 +307,12 @@ export const createPost = async (req: Request, res: Response) => {
       post: savedPost
     });
   } catch (error) {
-    console.error('Error creating post:', error);
-    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+    const appError = error instanceof AppError ? error : createAppError('An unexpected error occurred.', ErrorType.INTERNAL_SERVER_ERROR);
+    res.status(getStatusCodeForErrorType(appError.type)).json({ success: false, message: appError.userMessage });
   }
 };
 
 export const getCategories = async (req: Request, res: Response) => {
-  console.log('arrived get categories');
-  
   try {
     const db = getDatabase();
     const categoriesCollection = db.collection('categories');
@@ -332,8 +329,6 @@ export const getCategories = async (req: Request, res: Response) => {
       .skip(skip)
       .limit(limit)
       .toArray(); // Convert cursor to array
-    
-    console.log(categories);
 
     // Get the total number of documents in the collection
     const totalCategories = await categoriesCollection.countDocuments();
@@ -355,25 +350,27 @@ export const getCategories = async (req: Request, res: Response) => {
         totalItems: totalCategories
       }
     });
-  } catch (error) {
-    console.error('Error fetching categories:', error);
+  } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
+      res.status(getStatusCodeForErrorType(error.type)).json({
+        success: false,
+        message: error.userMessage
+      });
     } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+      res.status(500).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR)
+      });
     }
   }
 };
 
 export const getCities = async (req: Request, res: Response) => {
-  console.log('arrived get cities');
-
   try {
     const db = getDatabase();
     const citiesCollection = db.collection('cities');
 
     const searchString = req.params.searchString as string;
-    console.log('Search string received:', searchString);
 
     if (!searchString) {
       throw createAppError("Search string is required.", ErrorType.VALIDATION);
@@ -381,21 +378,16 @@ export const getCities = async (req: Request, res: Response) => {
 
     const searchTerms = searchString.trim().toLowerCase().split(' ');
     const firstSearchLetter = searchTerms[0][0]; // Get the first letter of the first search term
-    console.log('Search terms:', searchTerms);
-    console.log('First search letter:', firstSearchLetter);
 
     const cityGroups = await citiesCollection.find({}).toArray();
-    console.log('City groups retrieved:', cityGroups.length);
 
     let matchingCities: Array<{ name: string, startsWithSearchLetter: boolean }> = [];
-    cityGroups.forEach((document, index) => {
-      console.log(`Checking document ${index}`);
+    cityGroups.forEach((document) => {
       if (document.cityGroups && Array.isArray(document.cityGroups)) {
         document.cityGroups.forEach(group => {
           if (group.cities && Array.isArray(group.cities)) {
             const groupMatches = group.cities.filter((city: { name: string; }) => {
               if (typeof city !== 'object' || !city.name || typeof city.name !== 'string') {
-                console.log(`Warning: Invalid city object found:`, city);
                 return false;
               }
               return searchTerms.every(term => 
@@ -405,12 +397,9 @@ export const getCities = async (req: Request, res: Response) => {
               ...city,
               startsWithSearchLetter: city.name.toLowerCase().startsWith(firstSearchLetter)
             }));
-            console.log(`Found ${groupMatches.length} matches in group ${group.letter}`);
             matchingCities = matchingCities.concat(groupMatches);
           }
         });
-      } else {
-        console.log(`Document ${index} has no cityGroups or cityGroups is not an array`);
       }
     });
 
@@ -421,13 +410,9 @@ export const getCities = async (req: Request, res: Response) => {
       return a.name.localeCompare(b.name); // Alphabetical order for ties
     });
 
-    console.log('Total matching cities:', matchingCities.length);
-
     if (matchingCities.length === 0) {
       throw createAppError("No cities found matching the search criteria.", ErrorType.NOT_FOUND);
     }
-
-    console.log('Matching cities:', matchingCities);
 
     // Remove the startsWithSearchLetter property before sending the response
     const responseData = matchingCities.map(({ name }) => ({ name }));
@@ -436,12 +421,17 @@ export const getCities = async (req: Request, res: Response) => {
       success: true,
       data: responseData
     });
-  } catch (error) {
-    console.error('Error fetching cities:', error);
+  } catch (error: any) {
     if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
+      res.status(getStatusCodeForErrorType(error.type)).json({
+        success: false,
+        message: error.userMessage
+      });
     } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+      res.status(500).json({
+        success: false,
+        message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR)
+      });
     }
   }
 };

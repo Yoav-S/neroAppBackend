@@ -3,13 +3,15 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { getDatabase } from '../config/database';
 import mongoose, { Document, Schema } from 'mongoose';
+import { OAuth2Client } from 'google-auth-library';
+
 import nodemailer from 'nodemailer'
 import { bucket } from '../config/firebaseConfig';
 import otpGenerator from 'otp-generator';
 import { ENV } from '../config/env';
 import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { Types } from 'mongoose';
-import { IUser, IUserCreate } from '../models/User';
+import User, { IUser, IUserCreate } from '../models/User';
 export const register = async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
@@ -55,16 +57,12 @@ export const register = async (req: Request, res: Response) => {
     const result = await usersCollection.insertOne(newUser);
     const user = await usersCollection.findOne({ _id: result.insertedId });
 
-    const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
-
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      token,
       user,
     });
   } catch (error) {
-    console.error('Error registering user:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage });
     } else {
@@ -74,10 +72,8 @@ export const register = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  console.log(req.body);
-  
   try {
-    const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
+    const db = getDatabase();
     const usersCollection = db.collection('users');
 
     const { email, password } = req.body;
@@ -87,7 +83,6 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const user = await usersCollection.findOne({ email });
-
     if (!user) {
       throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
     }
@@ -97,8 +92,10 @@ export const login = async (req: Request, res: Response) => {
       throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
     }
 
+    // Create JWT token
     const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
-    user.token = token;
+
+    // Prepare user response without sensitive information
     const userWithoutSensitiveInfo = {
       _id: user._id,
       email: user.email,
@@ -109,7 +106,8 @@ export const login = async (req: Request, res: Response) => {
       picture: user.picture,
       createdAt: user.createdAt
     };
-    
+
+    // Send response
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -132,17 +130,12 @@ export const getUserById = async (req: Request, res: Response) => {
     const userId = req.params.userId.trim();
 
     const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
-    
+
     if (!user) {
       throw createAppError("User not found", ErrorType.NOT_FOUND);
     }
 
-    // Generate a new token
-    const newToken = jwt.sign(
-      { userId: user._id, role: user.role },
-      ENV.JWT_SECRET || '',
-      { expiresIn: '1m' } // Adjust expiration time as needed
-    );
+    // Prepare user response without sensitive information
     const userWithoutSensitiveInfo = {
       _id: user._id,
       email: user.email,
@@ -153,11 +146,18 @@ export const getUserById = async (req: Request, res: Response) => {
       picture: user.picture,
       createdAt: user.createdAt
     };
+
+    const newToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      ENV.JWT_SECRET || '',
+      { expiresIn: '1h' } 
+    );
+
     res.status(200).json({
       success: true,
       message: 'Successfully found user',
-      userWithoutSensitiveInfo,
-      token: newToken
+      user: userWithoutSensitiveInfo,
+      token: newToken 
     });
   } catch (error) {
     if (error instanceof AppError) {
@@ -167,9 +167,7 @@ export const getUserById = async (req: Request, res: Response) => {
     }
   }
 };
-
 export const sendEmailOTP = async (req: Request, res: Response) => {  
-  
   try {
     const db = getDatabase();
     const usersCollection = db.collection('users');
@@ -228,7 +226,6 @@ export const sendEmailOTP = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, message: 'OTP sent successfully', otp });
   } catch (error) {
-    console.error('Error sending OTP:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage });
     } else {
@@ -236,6 +233,7 @@ export const sendEmailOTP = async (req: Request, res: Response) => {
     }
   }
 };
+
 
 
 export const resetPassword = async (req: Request, res: Response) => {
@@ -249,9 +247,9 @@ export const resetPassword = async (req: Request, res: Response) => {
       throw createAppError("Email and new password are required", ErrorType.VALIDATION);
     }
 
-    const requiredUser = await usersCollection.findOne({ email });
+    const user = await usersCollection.findOne({ email });
     
-    if (!requiredUser) {
+    if (!user) {
       throw createAppError("User not found", ErrorType.NOT_FOUND);
     }
 
@@ -259,7 +257,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     
     await usersCollection.updateOne(
-      { email: email },
+      { email },
       { $set: { password: hashedPassword } }
     );
     
@@ -269,7 +267,6 @@ export const resetPassword = async (req: Request, res: Response) => {
       data: true
     });
   } catch (error) {
-    console.error('Error changing password:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage, data: false });
     } else {
@@ -278,9 +275,10 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+
 export const getNewTokenById = async (req: Request, res: Response) => {
   const userId = req.params.userId.trim();
-    const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
+  const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
   const usersCollection = db.collection('users');
 
   try {
@@ -297,6 +295,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     if (!user) {
       throw createAppError('User not found', ErrorType.NOT_FOUND);
     }
+
     const userWithoutSensitiveInfo = {
       _id: user._id,
       email: user.email,
@@ -307,11 +306,12 @@ export const getNewTokenById = async (req: Request, res: Response) => {
       picture: user.picture,
       createdAt: user.createdAt
     };
+
     // Send the new token and user details
-    res.json({
+    res.status(200).json({
       success: true,
       token: newToken,
-      userWithoutSensitiveInfo
+      user: userWithoutSensitiveInfo
     });
   } catch (error) {
     if (error instanceof AppError) {
@@ -322,7 +322,6 @@ export const getNewTokenById = async (req: Request, res: Response) => {
       });
     } else {
       // Handle unexpected errors
-      console.error('Unexpected error:', error);
       res.status(500).json({
         success: false,
         error: 'Internal server error'
@@ -340,7 +339,7 @@ export const otpVerification = async (req: Request, res: Response) => {
 
     const db = getDatabase();
     const otpCollection = db.collection('otps');
-    const userOtpData = await otpCollection.findOne({ userId: userId });
+    const userOtpData = await otpCollection.findOne({ userId });
 
     if (!userOtpData || !userOtpData.otps) {
       throw createAppError("OTP not found for this user", ErrorType.NOT_FOUND);
@@ -355,14 +354,12 @@ export const otpVerification = async (req: Request, res: Response) => {
 
     // Optionally remove the used OTP
     await otpCollection.updateOne(
-      { userId: userId },
-      { $pull: { otps: { otp: otp } as any } }
+      { userId },
+      { $pull: { otps: { otp } as any } }
     );
 
-    return res.status(200).json({ success: true, message: 'OTP verified successfully' });
-
+    res.status(200).json({ success: true, message: 'OTP verified successfully' });
   } catch (error) {
-    console.error('Error during OTP verification:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage });
     } else {
@@ -371,10 +368,9 @@ export const otpVerification = async (req: Request, res: Response) => {
   }
 };
 
+
 export const loginWithGoogle = async (req: Request, res: Response) => {
   try {
-    const db = getDatabase();
-    const usersCollection = db.collection<IUser>('users');
     const { token } = req.body;
 
     if (!token) {
@@ -382,38 +378,34 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     }
 
     // Verify Google OAuth token
-    const { OAuth2Client } = require('google-auth-library');
     const client = new OAuth2Client(ENV.GOOGLE_ANDROID_CLIENT_ID);
-
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: ENV.GOOGLE_ANDROID_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
-    const googleUserId = payload['sub'];
-    const email = payload['email'];
-    const picture = payload['picture'];
+    const googleUserId = payload?.sub;
+    const email = payload?.email;
+    const picture = payload?.picture;
+
+    if (!googleUserId || !email) {
+      throw createAppError("Invalid Google token payload", ErrorType.AUTHENTICATION);
+    }
 
     // Check if user already exists
-    let user: IUser | null = await usersCollection.findOne({ email });
+    let user: IUser | null = await User.findOne({ email }).exec();
 
     if (user) {
       // If user exists, update Google-specific fields
-      await usersCollection.updateOne(
-        { id: user._id },
-        { 
-          $set: { 
-            googleUserId,
-            firstName: payload['given_name'] || user.firstName,
-            lastName: payload['family_name'] || user.lastName,
-            picture: picture || user.picture,
-            authProvider: 'GOOGLE' as const,
-            updatedAt: new Date()
-          }
-        }
-      );
-      user = await usersCollection.findOne({ id: user._id });
+      user.googleUserId = googleUserId;
+      user.firstName = payload?.given_name || user.firstName;
+      user.lastName = payload?.family_name || user.lastName;
+      user.picture = picture || user.picture;
+      user.authProvider = 'GOOGLE';
+      user.updatedAt = new Date();
+
+      await user.save();
     } else {
       // If user doesn't exist, create a new user and download the default profile picture
       const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
@@ -421,19 +413,19 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
       const [metadata] = await file.getMetadata();
       const defaultPictureUrl = metadata.mediaLink;
 
-      const newUser: IUserCreate = {
+      const newUser = new User({
         email,
-        firstName: payload['given_name'] || '',
-        lastName: payload['family_name'] || '',
+        firstName: payload?.given_name || '',
+        lastName: payload?.family_name || '',
         role: 'USER',
-        userId: new Types.ObjectId().toHexString(),
+        userId: new mongoose.Types.ObjectId().toHexString(),
         googleUserId,
         picture: defaultPictureUrl,
         authProvider: 'GOOGLE',
-      };
+      });
 
-      const result = await usersCollection.insertOne(newUser as any);
-      user = await usersCollection.findOne({ _id: result.insertedId });
+      await newUser.save();
+      user = newUser;
     }
 
     if (!user) {
@@ -447,7 +439,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      user: { ...user, token: jwtToken },
+      user: { ...user.toObject(), token: jwtToken },
     });
 
   } catch (error) {
