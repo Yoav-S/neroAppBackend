@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUserById, login, register, sendEmailOTP, resetPassword, otpVerification, loginWithGoogle, getNewTokenById } from '../controllers/authController';
+import { getUserById, login, register, sendEmailOTP, resetPassword, loginWithGoogle, getNewTokenById } from '../controllers/authController';
 
 const router = express.Router();
 
@@ -10,5 +10,4 @@ router.post('/signup', register);
 router.post('/resetPassword', resetPassword);
 router.post('/sendEmailOTP/:email', sendEmailOTP);
 router.get('/getUserById/:userId', getUserById); // Make sure to include :userId as a parameter
-router.get('/otpVerification', otpVerification);
 export default router;

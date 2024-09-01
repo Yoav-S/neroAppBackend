@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getDatabase } from '../config/database';
-import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
+import { AppError, ErrorCode, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken'
@@ -71,7 +71,7 @@ export const deletePost = async (req: Request, res: Response) => {
   try {
     // Validate Bearer token
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createAppError('Access token is missing or invalid.', ErrorType.AUTHENTICATION);
+      throw createAppError( ErrorCode.INVALID_TOKEN);
     }
 
     const token = authHeader.split(' ')[1];
@@ -80,7 +80,7 @@ export const deletePost = async (req: Request, res: Response) => {
     const userId = decodedToken.userId;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      throw createAppError('Invalid post ID.', ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     const db = getDatabase();
@@ -90,12 +90,12 @@ export const deletePost = async (req: Request, res: Response) => {
     const post = await postsCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
 
     if (!post) {
-      throw createAppError('Post not found.', ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     // Validate if the user has permission to delete the post
     if (post.userId.toString() !== userId) {
-      throw createAppError('Unauthorized action.', ErrorType.AUTHORIZATION);
+      throw createAppError(ErrorCode.INSUFFICIENT_PERMISSIONS);
     }
 
     // Delete associated images from Firebase Storage
@@ -117,7 +117,7 @@ export const deletePost = async (req: Request, res: Response) => {
     const deleteResult = await postsCollection.deleteOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
 
     if (deleteResult.deletedCount === 0) {
-      throw createAppError('Failed to delete the post.', ErrorType.DatabaseError);
+      throw createAppError(ErrorCode.DATABASE_QUERY_ERROR);
     }
 
     res.status(200).json({ success: true, message: 'Post deleted successfully.' });
@@ -149,7 +149,7 @@ export const reportPost = async (req: Request, res: Response) => {
   try {
     // Validate Bearer token
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createAppError('Access token is missing or invalid.', ErrorType.AUTHENTICATION);
+      throw createAppError(ErrorCode.INVALID_TOKEN);
     }
 
     const token = authHeader.split(' ')[1];
@@ -158,7 +158,7 @@ export const reportPost = async (req: Request, res: Response) => {
     const userId = decodedToken.userId;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
-      throw createAppError('Invalid post ID.', ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     const db = getDatabase();
@@ -166,17 +166,17 @@ export const reportPost = async (req: Request, res: Response) => {
     const usersCollection = db.collection('users');
 
     // Find the post by ID
-    const post = await postsCollection.findOne({ _id: new mongoose.Types.ObjectId(postId) });
+    const post = await postsCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
 
     if (!post) {
-      throw createAppError('Post not found.', ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     // Find the user by ID to get their email
-    const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+    const user = await usersCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(userId) });
 
     if (!user || !user.email) {
-      throw createAppError('User not found or email not available.', ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.USER_NOT_FOUND);
     }
 
     // Set up email transporter
@@ -376,7 +376,7 @@ export const getCities = async (req: Request, res: Response) => {
     console.log('Search string received:', searchString);
 
     if (!searchString) {
-      throw createAppError("Search string is required.", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.INVALID_INPUT);
     }
 
     const searchTerms = searchString.trim().toLowerCase().split(' ');
@@ -424,7 +424,7 @@ export const getCities = async (req: Request, res: Response) => {
     console.log('Total matching cities:', matchingCities.length);
 
     if (matchingCities.length === 0) {
-      throw createAppError("No cities found matching the search criteria.", ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     console.log('Matching cities:', matchingCities);

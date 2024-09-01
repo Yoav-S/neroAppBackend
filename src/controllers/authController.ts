@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { getDatabase } from '../config/database';
@@ -7,94 +7,117 @@ import nodemailer from 'nodemailer'
 import { bucket } from '../config/firebaseConfig';
 import otpGenerator from 'otp-generator';
 import { ENV } from '../config/env';
-import { AppError, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
+import { AppError, ErrorCode, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
 import { Types } from 'mongoose';
 import { IUser, IUserCreate } from '../models/User';
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const usersCollection = db.collection('users');
 
     const { email, password, firstName, lastName, phone } = req.body;
 
+    // Validate required fields
     if (!email || !password || !firstName || !lastName || !phone) {
-      throw createAppError("All fields are required", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.MISSING_REQUIRED_FIELD);
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw createAppError(ErrorCode.INVALID_EMAIL_FORMAT);
+    }
+
+    // Validate password format (example: at least 8 characters, 1 uppercase, 1 lowercase, 1 number)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    if (!passwordRegex.test(password)) {
+      throw createAppError(ErrorCode.INVALID_PASSWORD_FORMAT);
+    }
+
+    // Check if user already exists
     const existingUser = await usersCollection.findOne({ email });
     if (existingUser) {
-      throw createAppError("User with this email already exists", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.EMAIL_ALREADY_REGISTERED);
     }
 
+    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const userId = new mongoose.Types.ObjectId().toString();
 
     // Construct the default profile picture URL using Firebase Admin SDK
-    const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
-    const file = bucket.file(defaultImagePath);
-    const [url] = await file.getSignedUrl({
-      action: 'read',
-      expires: '03-09-2491',  // Set a long expiration date or adjust as needed
-    });
+    try {
+      const defaultImagePath = 'defaultimagesfolder/defaultprofilepicture.png';
+      const file = bucket.file(defaultImagePath);
+      const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-09-2491',  // Set a long expiration date or adjust as needed
+      });
 
-    const newUser = {
-      email,
-      role: 'USER',
-      password: hashedPassword,
-      firstName,
-      lastName,
-      phone,
-      userId,
-      picture: url,  // Use the signed URL for the profile picture
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      const newUser = {
+        email,
+        role: 'USER',
+        password: hashedPassword,
+        firstName,
+        lastName,
+        phone,
+        userId,
+        picture: url,  // Use the signed URL for the profile picture
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
-    const result = await usersCollection.insertOne(newUser);
-    const user = await usersCollection.findOne({ _id: result.insertedId });
+      const result = await usersCollection.insertOne(newUser);
+      if (!result.acknowledged) {
+        throw createAppError(ErrorCode.DATABASE_QUERY_ERROR);
+      }
 
-    const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+      const user = await usersCollection.findOne({ _id: result.insertedId });
+      if (!user) {
+        throw createAppError(ErrorCode.RECORD_NOT_FOUND);
+      }
 
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      token,
-      user,
-    });
+      const token = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
+
+      res.status(201).json({
+        success: true,
+        message: 'User registered successfully',
+        token,
+        user,
+      });
+    } catch (fileError) {
+      console.error('Error getting default profile picture:', fileError);
+      throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
+    }
   } catch (error) {
     console.error('Error registering user:', error);
-    if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
-    } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
-    }
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   console.log(req.body);
   
   try {
-    const db = getDatabase(); // Assuming getDatabase() function is correctly implemented
+    const db = getDatabase();
     const usersCollection = db.collection('users');
 
     const { email, password } = req.body;
 
     if (!email || !password) {
-      throw createAppError("Email and password are required", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.MISSING_CREDENTIALS);
     }
 
     const user = await usersCollection.findOne({ email });
 
     if (!user) {
-      throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
+      throw createAppError(ErrorCode.INVALID_CREDENTIALS);
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      throw createAppError("Invalid credentials", ErrorType.AUTHENTICATION);
+      throw createAppError(ErrorCode.INVALID_CREDENTIALS);
     }
 
     const token = jwt.sign({ userId: user._id, role: user.role }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
@@ -116,45 +139,51 @@ export const login = async (req: Request, res: Response) => {
       user: userWithoutSensitiveInfo,
     });
   } catch (error) {
-    if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
-    } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
-    }
+    next(error);
   }
 };
 
-export const getUserById = async (req: Request, res: Response) => {
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const usersCollection = db.collection('users');
-    const userId = req.params.userId.trim();
+    const userId = req.params.userId?.trim();
+
+    if (!userId) {
+      throw createAppError(ErrorCode.MISSING_REQUIRED_FIELD);
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw createAppError(ErrorCode.INVALID_INPUT);
+    }
 
     const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
     
     if (!user) {
-      throw createAppError("User not found", ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.USER_NOT_FOUND);
     }
 
     // Generate a new token
-    const newToken = jwt.sign(
-      { userId: user._id, role: user.role },
-      ENV.JWT_SECRET || '',
-      { expiresIn: '1h' } // Adjust expiration time as needed
-    );
+    try {
+      const newToken = jwt.sign(
+        { userId: user._id, role: user.role },
+        ENV.JWT_SECRET || '',
+        { expiresIn: '1h' } // Adjust expiration time as needed
+      );
 
-    res.status(200).json({
-      success: true,
-      message: 'Successfully found user',
-      user,
-      token: newToken
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
-    } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+      res.status(200).json({
+        success: true,
+        message: 'Successfully found user',
+        user,
+        token: newToken
+      });
+    } catch (jwtError) {
+      console.error('Error generating JWT:', jwtError);
+      throw createAppError(ErrorCode.INTERNAL_SERVER_ERROR);
     }
+  } catch (error) {
+    console.error('Error getting user by ID:', error);
+    next(error);
   }
 };
 
@@ -168,15 +197,15 @@ export const sendEmailOTP = async (req: Request, res: Response) => {
     const email = req.params.email.trim();
 
     if (!email) {
-      throw createAppError("Email is required", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.MISSING_REQUIRED_FIELD);
     }
 
     const user = await usersCollection.findOne({ email });
     if (!user) {
-      return res.status(200).json({ success: true, message: 'If a user with this email exists, an OTP has been sent.', otp: '0000' });
+      return res.status(200).json({ success: true, message: 'If a user with this email exists, an OTP has been sent.', otp: '00000' });
     }
 
-    const otp = otpGenerator.generate(4, {
+    const otp = otpGenerator.generate(!user ? 5 : 4, {
       upperCaseAlphabets: false,
       specialChars: false,
       lowerCaseAlphabets: false
@@ -236,13 +265,13 @@ export const resetPassword = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      throw createAppError("Email and new password are required", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.MISSING_REQUIRED_FIELD);
     }
 
     const requiredUser = await usersCollection.findOne({ email });
     
     if (!requiredUser) {
-      throw createAppError("User not found", ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.USER_NOT_FOUND);
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -274,9 +303,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
   const usersCollection = db.collection('users');
 
   try {
-    if (!userId) {
-      throw createAppError('User ID is required', ErrorType.VALIDATION);
-    }
+
 
     // Generate a new JWT token
     const newToken = jwt.sign({ userId }, ENV.JWT_SECRET || '', { expiresIn: '1h' });
@@ -285,7 +312,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     const user = await usersCollection.findOne({ _id: userId });
 
     if (!user) {
-      throw createAppError('User not found', ErrorType.NOT_FOUND);
+      throw createAppError(ErrorCode.USER_NOT_FOUND);
     }
 
     // Send the new token and user details
@@ -311,46 +338,7 @@ export const getNewTokenById = async (req: Request, res: Response) => {
     }
   }
 };
-export const otpVerification = async (req: Request, res: Response) => {
-  try {
-    const { otp, userId } = req.body;
 
-    if (!otp || !userId) {
-      throw createAppError("OTP and userId are required", ErrorType.VALIDATION);
-    }
-
-    const db = getDatabase();
-    const otpCollection = db.collection('otps');
-    const userOtpData = await otpCollection.findOne({ userId: userId });
-
-    if (!userOtpData || !userOtpData.otps) {
-      throw createAppError("OTP not found for this user", ErrorType.NOT_FOUND);
-    }
-
-    const currentTime = new Date();
-    const validOtp = userOtpData.otps.find((o: any) => o.otp === otp && o.otpExpiration > currentTime);
-
-    if (!validOtp) {
-      throw createAppError("Invalid or expired OTP", ErrorType.VALIDATION);
-    }
-
-    // Optionally remove the used OTP
-    await otpCollection.updateOne(
-      { userId: userId },
-      { $pull: { otps: { otp: otp } as any } }
-    );
-
-    return res.status(200).json({ success: true, message: 'OTP verified successfully' });
-
-  } catch (error) {
-    console.error('Error during OTP verification:', error);
-    if (error instanceof AppError) {
-      res.status(400).json({ success: false, message: error.userMessage });
-    } else {
-      res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
-    }
-  }
-};
 
 export const loginWithGoogle = async (req: Request, res: Response) => {
   try {
@@ -359,7 +347,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     const { token } = req.body;
 
     if (!token) {
-      throw createAppError("Google OAuth token is required", ErrorType.VALIDATION);
+      throw createAppError(ErrorCode.INVALID_TOKEN);
     }
 
     // Verify Google OAuth token
@@ -418,7 +406,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
     }
 
     if (!user) {
-      throw createAppError("Failed to create or retrieve user", ErrorType.SERVER_ERROR);
+      throw createAppError(ErrorCode.USER_NOT_FOUND);
     }
 
     // Generate JWT token
