@@ -18,7 +18,6 @@ export const createChat = async (req: Request, res: Response, next: NextFunction
     if (isGroupChat && !admin) {
       throw createAppError(ErrorCode.INVALID_INPUT);
     }
-
     // Create the new chat
     const newChat = await Chat.create({
       participants,
@@ -32,7 +31,6 @@ export const createChat = async (req: Request, res: Response, next: NextFunction
       { _id: { $in: participants } },
       { $push: { chats: newChat._id } }
     );
-
     res.status(201).json({ chat: newChat });
   } catch (error) {
     next(error);
@@ -43,14 +41,43 @@ export const createChat = async (req: Request, res: Response, next: NextFunction
 // Fetch all chats for a user
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { userId, pageNumber } = req.body;
+    const { userId, page = 0 } = req.body; // Default to page 0 if not provided
+    const limit = 7; // Number of chats per page
 
-    const chats = await Chat.find({ participants: userId })
+    // Create the filter query
+    const filterQuery = { participants: userId };
+
+    // Count total chats
+    const totalChats = await Chat.countDocuments(filterQuery);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalChats / limit);
+
+    // Calculate the number of documents to skip
+    const skip = page * limit;
+
+    // Retrieve chats that match the filter with pagination
+    const chatsForCurrentPage = await Chat.find(filterQuery)
       .populate('participants', 'username')
       .populate('lastMessage')
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ chats });
+    // Check if there are more chats
+    const isMore: boolean = (page + 1) * limit < totalChats;
+
+    // Send the response with the chats and pagination info
+    res.status(200).json({
+      success: true,
+      data: chatsForCurrentPage,
+      pagination: {
+        isMore,
+        page,
+        totalPages,
+        totalChats
+      }
+    });
   } catch (error) {
     next(error);
   }
