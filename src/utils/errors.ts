@@ -26,6 +26,10 @@ export enum ErrorCode {
     TOKEN_EXPIRED = 'TOKEN_EXPIRED',
     INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS',
     ACCOUNT_LOCKED = 'ACCOUNT_LOCKED',
+    INVALID_PARTICIPANTS = 'INVALID_PARTICIPANTS',
+    ADMIN_REQUIRED = 'ADMIN_REQUIRED',
+    CHAT_NOT_FOUND = 'CHAT_NOT_FOUND',
+    MESSAGE_NOT_FOUND = 'MESSAGE_NOT_FOUND',
     
     // Validation & Input
     INVALID_INPUT = 'INVALID_INPUT',
@@ -70,6 +74,7 @@ export enum ErrorCode {
 }
 
 // Mapping of error codes to their details
+// Mapping of error codes to their details
 const errorDetails: Record<ErrorCode, { message: string, type: ErrorType }> = {
     // Authentication & Authorization
     [ErrorCode.MISSING_CREDENTIALS]: { 
@@ -99,6 +104,22 @@ const errorDetails: Record<ErrorCode, { message: string, type: ErrorType }> = {
     [ErrorCode.ACCOUNT_LOCKED]: { 
         message: "Account is locked", 
         type: ErrorType.AUTHENTICATION 
+    },
+    [ErrorCode.INVALID_PARTICIPANTS]: { 
+        message: "Invalid participants for the chat", 
+        type: ErrorType.VALIDATION 
+    },
+    [ErrorCode.ADMIN_REQUIRED]: { 
+        message: "Admin is required for group chats", 
+        type: ErrorType.VALIDATION 
+    },
+    [ErrorCode.CHAT_NOT_FOUND]: { 
+        message: "Chat not found", 
+        type: ErrorType.NOT_FOUND 
+    },
+    [ErrorCode.MESSAGE_NOT_FOUND]: { 
+        message: "Message not found", 
+        type: ErrorType.NOT_FOUND 
     },
     
     // Validation & Input
@@ -217,6 +238,7 @@ const errorDetails: Record<ErrorCode, { message: string, type: ErrorType }> = {
         type: ErrorType.SERVER_ERROR 
     }
 };
+
 
 // Custom error class extending the native Error class
 export class AppError extends Error {
