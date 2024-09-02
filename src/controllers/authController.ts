@@ -55,6 +55,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         expires: '03-09-2491',  // Set a long expiration date or adjust as needed
       });
 
+      // Create the new user object with the empty chats array
       const newUser = {
         email,
         role: 'USER',
@@ -64,8 +65,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         phone,
         userId,
         picture: url,  // Use the signed URL for the profile picture
+        chats: [],  // Initialize the chats array as empty
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       const result = await usersCollection.insertOne(newUser);
