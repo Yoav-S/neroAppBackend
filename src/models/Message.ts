@@ -9,6 +9,7 @@ export interface IMessage extends Document {
   content: string; // The text content of the message
   timestamp: Date; // When the message was created
   status: 'Not delivered' | 'Sent' | 'Delivered' | 'Read' | 'Changed' | 'In progress'; // Delivery status of the message
+  isOpened: boolean; // Whether the message
   isEdited: boolean; // Flag to indicate if the message was edited
   reactions: Array<{ userId: IUser['_id']; reaction: string }>; // List of reactions to this message
   attachments: Array<{ attachmentId: string; type: string; url: string; thumbnail?: string }>; // List of attachments in this message
@@ -27,7 +28,7 @@ const MessageSchema: Schema = new Schema(
       default: 'In progress'
     },
     isEdited: { type: Boolean, default: false },
-
+    isOpened: { type: Boolean, default: false },
     // Reactions: stores user reactions (e.g., emojis) to the message
     reactions: [
       {

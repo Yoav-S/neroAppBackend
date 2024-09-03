@@ -127,7 +127,6 @@ export const sendMessage = async (req: Request, res: Response, next: NextFunctio
 
     chat.lastMessage = newMessage._id;
     chat.messages.push(newMessage._id);
-    chat.unreadMessagesCount += 1;
     await chat.save();
 
     res.status(201).json({ message: newMessage });

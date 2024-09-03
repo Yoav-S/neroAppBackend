@@ -1364,3 +1364,6 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-08-30T09:08:43.744Z"}
 {"level":"info","message":"::1 - - [30/Aug/2024:09:08:44 +0000] \"GET /auth/getNewTokenById/66845193ecacaecf8674d498 HTTP/1.1\" 200 1306 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-08-30T09:08:44.456Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-08-30T09:09:10.304Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-02T17:29:26.335Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-02T17:29:26.339Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-02T17:29:38.829Z"}
