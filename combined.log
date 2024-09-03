@@ -1370,3 +1370,6 @@
 {"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-03T12:09:35.121Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-03T12:09:35.126Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-03T12:09:41.691Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-03T12:15:17.990Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-03T12:15:17.995Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-03T12:15:19.462Z"}

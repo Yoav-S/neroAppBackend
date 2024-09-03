@@ -5,6 +5,7 @@ import { createAppError, ErrorCode } from '../utils/errors';
 import User from '../models/User';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
+import { getDatabase } from '../config/database';
 
 // Create a new chat
 export const createChat = async (req: Request, res: Response, next: NextFunction) => {
@@ -44,11 +45,14 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const { userId, page = 0 } = req.body; // Default to page 0 if not provided
     const limit = 7; // Number of chats per page
 
+    const db = getDatabase();
+    const chatsCollection = db.collection('chats');
+
     // Create the filter query
-    const filterQuery = { participants: userId };
+    const filterQuery = { participants: mongoose.Types.ObjectId.createFromHexString(userId) };
 
     // Count total chats
-    const totalChats = await Chat.countDocuments(filterQuery);
+    const totalChats = await chatsCollection.countDocuments(filterQuery);
 
     // Calculate total pages
     const totalPages = Math.ceil(totalChats / limit);
@@ -57,12 +61,28 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const skip = page * limit;
 
     // Retrieve chats that match the filter with pagination
-    const chatsForCurrentPage = await Chat.find(filterQuery)
-      .populate('participants', 'username')
-      .populate('lastMessage')
+    const chatsForCurrentPage = await chatsCollection.find(filterQuery)
       .sort({ updatedAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .toArray(); // Convert to array
+
+    // Populate participants and lastMessage (if needed)
+    const populatedChats = await Promise.all(chatsForCurrentPage.map(async (chat) => {
+      const populatedParticipants = await db.collection('users')
+        .find({ _id: { $in: chat.participants } })
+        .project({ username: 1 })
+        .toArray();
+
+      const populatedLastMessage = await db.collection('messages')
+        .findOne({ _id: chat.lastMessage });
+
+      return {
+        ...chat,
+        participants: populatedParticipants,
+        lastMessage: populatedLastMessage,
+      };
+    }));
 
     // Check if there are more chats
     const isMore: boolean = (page + 1) * limit < totalChats;
@@ -70,19 +90,18 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     // Send the response with the chats and pagination info
     res.status(200).json({
       success: true,
-      data: chatsForCurrentPage,
+      data: populatedChats,
       pagination: {
         isMore,
         page,
         totalPages,
-        totalChats
-      }
+        totalChats,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
-
 // Send a message in a chat
 export const sendMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
