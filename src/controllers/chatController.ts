@@ -24,6 +24,8 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const usersCollection = db.collection('users');
     const messagesCollection = db.collection('messages');
 
+    console.log(`Fetching chats for user: ${userId}, Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
       .find({ participants: userId })
@@ -31,17 +33,30 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
       .limit(limit)
       .toArray();
 
+    console.log(`Fetched chats: ${JSON.stringify(chats)}`);
+
+    // Check if chats were found
+    if (!chats || chats.length === 0) {
+      console.log('No chats found for the user.');
+    }
+
     // Prepare an array to store the result with other user details
     const resultChats = await Promise.all(
       chats.map(async (chat) => {
+        console.log(`Processing chat: ${chat.chatId}`);
+
         // Determine the other participant's ID (assuming only 2 participants)
         const otherParticipantId = chat.participants.find((id: string) => id !== userId);
+
+        console.log(`Other participant ID: ${otherParticipantId}`);
 
         // Fetch the other user's profile information
         const otherUser = await usersCollection.findOne(
           { _id: otherParticipantId },
           { projection: { picture: 1, firstName: 1, lastName: 1 } }
         );
+
+        console.log(`Other user details: ${JSON.stringify(otherUser)}`);
 
         // Fetch the last message details
         const lastMessage = chat.lastMessage
@@ -51,8 +66,10 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
             )
           : null;
 
+        console.log(`Last message details: ${JSON.stringify(lastMessage)}`);
+
         // Map to the ChatListProps format
-        return {
+        const chatDetails = {
           chatId: chat.chatId,
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
@@ -61,8 +78,13 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           isPinned: false, // Assume false unless you have pinning functionality
           messagesDidntReadAmount: chat.messagesDidntReadAmount || 0, // Assuming you have a field for this
         };
+
+        console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
+        return chatDetails;
       })
     );
+
+    console.log('Final resultChats:', resultChats);
 
     // Send the response with the chats and pagination info
     res.status(200).json({
@@ -76,9 +98,11 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
       }
     });
   } catch (error) {
+    console.error('Error in getUserChats:', error);
     next(error);
   }
 };
+
 
 
 //
