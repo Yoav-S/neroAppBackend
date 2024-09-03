@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import Chat from '../models/Chat';
-import Message from '../models/Message';
-import { createAppError, ErrorCode } from '../utils/errors';
-import User from '../models/User';
-import { bucket } from '../config/firebaseConfig';
-import mongoose from 'mongoose';
+
+
+import { ObjectId } from 'mongoose';
 import { getDatabase } from '../config/database';
 
 // Create a new chat
@@ -24,11 +21,14 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const usersCollection = db.collection('users');
     const messagesCollection = db.collection('messages');
 
-    console.log(`Fetching chats for user: ${userId}, Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    // Convert userId to ObjectId
+    const userObjectId = new Object(userId);
+
+    console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-      .find({ participants: userId })
+      .find({ participants: userObjectId })
       .skip(skip)
       .limit(limit)
       .toArray();
@@ -46,7 +46,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         console.log(`Processing chat: ${chat.chatId}`);
 
         // Determine the other participant's ID (assuming only 2 participants)
-        const otherParticipantId = chat.participants.find((id: string) => id !== userId);
+        const otherParticipantId = chat.participants.find((id: ObjectId) => id.toString() !== userObjectId.toString());
 
         console.log(`Other participant ID: ${otherParticipantId}`);
 
@@ -76,7 +76,6 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           lastMessageText: lastMessage ? lastMessage.content : '',
           lastMessageDate: lastMessage ? lastMessage.createdAt : new Date(),
           isPinned: false, // Assume false unless you have pinning functionality
-          messagesDidntReadAmount: chat.messagesDidntReadAmount || 0, // Assuming you have a field for this
         };
 
         console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
