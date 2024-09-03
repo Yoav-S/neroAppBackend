@@ -28,7 +28,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-      .find({ participants: { $in: [userObjectId] } }) // Use $in to query array
+      .find({ participants: { $in: userObjectId} }) // Use $in to query array
       .skip(skip)
       .limit(limit)
       .toArray();
