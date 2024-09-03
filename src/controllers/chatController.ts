@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import Chat, { IChat } from '../models/Chat';
-import Message, { IMessage } from '../models/Message';
+import Chat from '../models/Chat';
+import Message from '../models/Message';
 import { createAppError, ErrorCode } from '../utils/errors';
-import User, { IUser } from '../models/User';
+import User from '../models/User';
 import { bucket } from '../config/firebaseConfig';
 import mongoose from 'mongoose';
-import { getDatabase } from '../config/database';
 
 // Create a new chat
 export const createChat = async (req: Request, res: Response, next: NextFunction) => {
@@ -40,77 +39,47 @@ export const createChat = async (req: Request, res: Response, next: NextFunction
 
 
 // Fetch all chats for a user
-interface PopulatedUser extends Pick<IUser, '_id' | 'firstName' | 'lastName' | 'picture'> {}
-
-interface PopulatedChat extends Omit<IChat, 'participants' | 'lastMessage'> {
-  participants: PopulatedUser[];
-  lastMessage?: IMessage;
-}
-
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, page = 0 } = req.body;
     const limit = 7;
-
-    // Validate userId
-    if (!userId) {
-      return res.status(400).json({ success: false, message: 'User ID is required' });
-    }
-
-    // MongoDB collections
-    const chatsCollection = mongoose.model<IChat>('Chat');
-    const usersCollection = mongoose.model<IUser>('User');
-    const messagesCollection = mongoose.model<IMessage>('Message');
-
-    // Fetch total chat count
-    const filterQuery = { participants: mongoose.Types.ObjectId.createFromHexString(userId) };
-    const totalChats = await chatsCollection.countDocuments(filterQuery);
-    const totalPages = Math.ceil(totalChats / limit);
     const skip = page * limit;
 
-    // Fetch chats with pagination
-    const chatsForCurrentPage = await chatsCollection.find(filterQuery)
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
+    // Directly query the Chat collection
+    const chats = await Chat.collection.find({ participants: userId }).skip(skip).limit(limit).toArray();
 
-    // Populate participants and lastMessage
-    const populatedChats: PopulatedChat[] = await Promise.all(chatsForCurrentPage.map(async (chat) => {
-      const populatedChat = chat.toObject() as IChat;
+    // Prepare an array to store the result with the other user's details
+    const resultChats = await Promise.all(
+      chats.map(async (chat) => {
+        // Determine the other participant's ID (assuming only 2 participants)
+        const otherParticipantId = chat.participants.find((id: { toString: () => any; }) => id.toString() !== userId);
 
-      // Populate participants
-      const participants = await usersCollection.find({ _id: { $in: populatedChat.participants } }).exec();
-      const populatedParticipants: PopulatedUser[] = participants.map(user => ({
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        picture: user.picture || '',
-      }));
+        // Directly query the User collection to find the other user's profile picture
+        const otherUser = await User.collection.findOne(
+          { _id: otherParticipantId },
+          { projection: { picture: 1, firstName: 1, lastName: 1 } }
+        );
 
-      // Populate lastMessage
-      const lastMessage = populatedChat.lastMessage
-        ? await messagesCollection.findById(populatedChat.lastMessage).exec()
-        : null;
+        return {
+          chatId: chat.chatId,
+          lastMessage: chat.lastMessage,
+          updatedAt: chat.updatedAt,
+          profilePicture: otherUser ? otherUser.picture : null,
+          fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : null,
+        };
+      })
+    );
 
-      return {
-        ...populatedChat,
-        participants: populatedParticipants,
-        lastMessage: lastMessage || undefined,
-      } as PopulatedChat;
-    }));
-
-    const isMore = (page + 1) * limit < totalChats;
-
+    // Send the response with the chats and pagination info
     res.status(200).json({
       success: true,
-      data: populatedChats,
+      data: resultChats,
       pagination: {
-        isMore,
+        isMore: (page + 1) * limit < chats.length,
         page,
-        totalPages,
-        totalChats,
-      },
+        totalPages: Math.ceil(chats.length / limit),
+        totalChats: chats.length
+      }
     });
   } catch (error) {
     next(error);
