@@ -45,11 +45,19 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const { userId, page = 0 } = req.body; // Default to page 0 if not provided
     const limit = 7; // Number of chats per page
 
+    // Validate and convert userId to ObjectId
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid userId.' });
+    }
+    const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
+
     const db = getDatabase();
-    const chatsCollection = db.collection('chats');
+    const chatsCollection = db.collection('Chats');
+    const usersCollection = db.collection('users');
+    const messagesCollection = db.collection('Messages'); // Assuming this exists
 
     // Create the filter query
-    const filterQuery = { participants: mongoose.Types.ObjectId.createFromHexString(userId) };
+    const filterQuery = { participants: userObjectId };
 
     // Count total chats
     const totalChats = await chatsCollection.countDocuments(filterQuery);
@@ -67,20 +75,58 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
       .limit(limit)
       .toArray(); // Convert to array
 
-    // Populate participants and lastMessage (if needed)
+    // Populate participants, lastMessage, and other user's profile picture
     const populatedChats = await Promise.all(chatsForCurrentPage.map(async (chat) => {
-      const populatedParticipants = await db.collection('users')
-        .find({ _id: { $in: chat.participants } })
-        .project({ username: 1 })
-        .toArray();
+      // Assuming chat.participants is an array of ObjectIds
+      const otherUserId = chat.participants.find((id: mongoose.Types.ObjectId) => !id.equals(userObjectId));
 
-      const populatedLastMessage = await db.collection('messages')
-        .findOne({ _id: chat.lastMessage });
+      if (!otherUserId) {
+        // Handle unexpected case: No other user found
+        return {
+          ...chat,
+          participants: chat.participants.map((participant: mongoose.Types.ObjectId) => ({
+            _id: participant,
+            username: participant.equals(userObjectId) ? 'You' : 'Unknown',
+            picture: participant.equals(userObjectId) ? null : null,
+          })),
+          lastMessage: await messagesCollection.findOne({ _id: chat.lastMessage }),
+          otherUserProfilePicture: null,
+        };
+      }
 
+      // Fetch the other user's details
+      const otherUser = await usersCollection.findOne(
+        { _id: otherUserId },
+        { projection: { username: 1, picture: 1 } }
+      );
+
+      // Fetch the last message
+      const populatedLastMessage = await messagesCollection.findOne({ _id: chat.lastMessage });
+
+      if (!otherUser) {
+        // Handle missing other user by providing default values
+        return {
+          ...chat,
+          participants: chat.participants.map((participant: mongoose.Types.ObjectId) => ({
+            _id: participant,
+            username: participant.equals(userObjectId) ? 'You' : 'Unknown',
+            picture: participant.equals(userObjectId) ? null : null,
+          })),
+          lastMessage: populatedLastMessage,
+          otherUserProfilePicture: null,
+        };
+      }
+
+      // Return the populated chat object with the other user's profile picture
       return {
         ...chat,
-        participants: populatedParticipants,
+        participants: chat.participants.map((participant: mongoose.Types.ObjectId) => ({
+          _id: participant,
+          username: participant.equals(userObjectId) ? 'You' : otherUser.username,
+          picture: participant.equals(userObjectId) ? null : otherUser.picture || null,
+        })),
         lastMessage: populatedLastMessage,
+        otherUserProfilePicture: otherUser.picture || null,
       };
     }));
 
@@ -102,6 +148,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
 // Send a message in a chat
 export const sendMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
