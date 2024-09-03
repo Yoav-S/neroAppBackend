@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
+import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your file
 
-import { ObjectId } from 'mongoose';
 import { getDatabase } from '../config/database';
 
 // Create a new chat
@@ -22,13 +22,13 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const messagesCollection = db.collection('messages');
 
     // Convert userId to ObjectId
-    const userObjectId = new Object(userId);
+    const userObjectId =  ObjectId.createFromHexString(userId);
 
     console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-      .find({ participants: userObjectId })
+      .find({ participants: { $in: [userObjectId] } }) // Use $in to query array
       .skip(skip)
       .limit(limit)
       .toArray();
