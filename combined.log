@@ -1373,3 +1373,111 @@
 {"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-03T12:15:17.990Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-03T12:15:17.995Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-03T12:15:19.462Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:23:45.304Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:23:45.308Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:25:25.491Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:25:25.496Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:25:47.679Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:25:47.683Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:27:59.527Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:27:59.532Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:28:03 +0000] \"GET /chat/getUserChats HTTP/1.1\" 404 156 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:28:03.303Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:28:05 +0000] \"GET /chat/getUserChats HTTP/1.1\" 404 156 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:28:05.417Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:28:13 +0000] \"GET /chat/getUserChats HTTP/1.1\" 404 156 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:28:13.705Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:28:44 +0000] \"POST /chat/getUserChats HTTP/1.1\" 500 1685 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:28:44.805Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:29:48.371Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:29:48.377Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:29:51 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:29:51.176Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:32:59.452Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:32:59.456Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:33:29.883Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:33:29.888Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:33:31 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:33:31.513Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:33:32 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:33:32.844Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:33:33 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:33:33.883Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:33:34 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:33:34.973Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:34:40.676Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:34:40.680Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:35:44.639Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:35:44.644Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:36:26.520Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:36:26.530Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:36:27 +0000] \"POST /chat/getUserChats HTTP/1.1\" - - \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:36:27.799Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:36:29 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:36:29.007Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:37:04.640Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:37:04.645Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:37:09 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:37:09.367Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:37:28.560Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:37:28.564Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:37:47.875Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:37:47.880Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:37:48 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:37:48.837Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:38:37.238Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:38:37.245Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:38:37 +0000] \"POST /chat/getUserChats HTTP/1.1\" 500 1685 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:38:37.505Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:38:50.920Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:38:50.925Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:38:51 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:38:51.408Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:39:18.480Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:39:18.488Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:18 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:18.804Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:19 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:19.919Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:20 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:20.969Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:39:44.318Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:39:44.330Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:39:49.435Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:39:49.439Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:52 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:52.086Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:53 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:53.293Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:39:54 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:39:54.361Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:40:15.320Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:40:15.324Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:40:26.245Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:40:26.252Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:40:28 +0000] \"POST /chat/getUserChats HTTP/1.1\" 500 1685 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:40:28.313Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:40:30 +0000] \"POST /chat/getUserChats HTTP/1.1\" 500 1685 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:40:30.089Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T04:40:40.434Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T04:40:40.439Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:04:40:42 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T04:40:42.283Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:06:55:59 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T06:55:59.584Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T06:56:43.755Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T06:56:43.760Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T06:58:39.615Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T06:58:39.620Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T06:59:25.545Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T06:59:25.550Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T06:59:31.700Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T06:59:31.705Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:06:59:35 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 839 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T06:59:35.609Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:00:18.676Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:00:18.681Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:00:20 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 95 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:00:20.406Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:00:55.000Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:00:55.005Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:00:59 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 834 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:00:59.130Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:01:13 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 834 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:01:13.040Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:06:12.151Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:06:12.156Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:06:13 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 834 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:06:13.291Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:07:06.240Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:07:06.246Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:07:07 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 879 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:07:07.860Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:07:26.793Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:07:26.798Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:08:03.565Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:08:03.583Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:11:43.911Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:11:43.918Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:11:56.149Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:11:56.153Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:11:58 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 872 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:11:58.355Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:12:59.853Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:12:59.859Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:13:09.795Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:13:09.799Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:19:47.465Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:19:47.471Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-04T07:19:57.547Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T07:19:57.552Z"}
+{"level":"info","message":"::1 - - [04/Sep/2024:07:19:58 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 912 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T07:19:58.585Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-04T07:20:14.246Z"}

@@ -4,11 +4,7 @@ import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your 
 
 import { getDatabase } from '../config/database';
 
-// Create a new chat
 
-
-
-// Fetch all chats for a user
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, page = 0 } = req.body;
@@ -17,9 +13,9 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
     // Connect to the database
     const db = getDatabase();
-    const chatsCollection = db.collection('chats');
+    const chatsCollection = db.collection('Chats');
     const usersCollection = db.collection('users');
-    const messagesCollection = db.collection('messages');
+    const messagesCollection = db.collection('Messages');
 
     // Convert userId to ObjectId
     const userObjectId =  ObjectId.createFromHexString(userId);
@@ -28,7 +24,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-      .find({ participants: { $in: userObjectId} }) // Use $in to query array
+      .find({participants: userObjectId}) 
       .skip(skip)
       .limit(limit)
       .toArray();
@@ -62,7 +58,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         const lastMessage = chat.lastMessage
           ? await messagesCollection.findOne(
               { _id: chat.lastMessage },
-              { projection: { content: 1, createdAt: 1 } }
+              { projection: { content: 1, timestamp: 1 } }
             )
           : null;
 
@@ -74,7 +70,8 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
           lastMessageText: lastMessage ? lastMessage.content : '',
-          lastMessageDate: lastMessage ? lastMessage.createdAt : new Date(),
+          lastMessageDate: lastMessage ? formatLastMessageDate(lastMessage.timestamp) : '',
+          recieverId: otherParticipantId,
           isPinned: false, // Assume false unless you have pinning functionality
         };
 
@@ -103,5 +100,24 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 };
 
 
-
+const formatLastMessageDate = (timestamp: Date) => {
+  const now: any = new Date();
+  const messageDate: any = new Date(timestamp);
+  
+  const diffInDays = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
+  
+  if (diffInDays === 0) {
+    // Today: show time
+    return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (diffInDays === 1) {
+    // Yesterday
+    return 'Yesterday';
+  } else if (diffInDays < 7) {
+    // Within a week: show day name
+    return messageDate.toLocaleDateString([], { weekday: 'long' });
+  } else {
+    // More than a week ago: show date
+    return messageDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+};
 //
