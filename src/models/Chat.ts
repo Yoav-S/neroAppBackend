@@ -10,9 +10,10 @@ export interface IChat extends Document {
   isGroupChat: boolean;
   chatName?: string;
   admin?: IUser['_id'];
-  lastMessageContent?: string; // Store last message content for quick display
-  lastMessageTimestamp?: Date; // Store last message timestamp for sorting
+  lastMessageContent?: string;
+  lastMessageTimestamp?: Date;
   chatAvatar?: string;
+  messageId: mongoose.Types.ObjectId; // Reference to the message object
 }
 
 const ChatSchema: Schema = new Schema(
@@ -22,9 +23,10 @@ const ChatSchema: Schema = new Schema(
     isGroupChat: { type: Boolean, default: false },
     chatName: { type: String },
     admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    lastMessageContent: { type: String }, // New field for storing the last message content
-    lastMessageTimestamp: { type: Date }, // New field for storing the last message timestamp
-    chatAvatar: { type: String }
+    lastMessageContent: { type: String },
+    lastMessageTimestamp: { type: Date },
+    chatAvatar: { type: String },
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' } // New field to reference the message object
   },
   { timestamps: true }
 );

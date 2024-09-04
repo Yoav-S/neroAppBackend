@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your file
 
 import { getDatabase } from '../config/database';
+import mongoose from 'mongoose';
 
 
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
@@ -15,13 +16,14 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const db = getDatabase();
     const chatsCollection = db.collection('Chats');
     const usersCollection = db.collection('users');
+    const messagesCollection = db.collection('Messages');
 
     // Convert userId to ObjectId
-    const userObjectId = ObjectId.createFromHexString(userId);
+    const userObjectId = new mongoose.Types.ObjectId(userId);
 
     console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
-    // Fetch chats where the user is a participant, including last message content and timestamp
+    // Fetch chats where the user is a participant
     const chats = await chatsCollection
       .find({ participants: userObjectId })
       .skip(skip)
@@ -33,6 +35,16 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     // Check if chats were found
     if (!chats || chats.length === 0) {
       console.log('No chats found for the user.');
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          isMore: false,
+          page,
+          totalPages: 0,
+          totalChats: 0
+        }
+      });
     }
 
     // Prepare an array to store the result with other user details
@@ -41,7 +53,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         console.log(`Processing chat: ${chat.chatId}`);
 
         // Determine the other participant's ID (assuming only 2 participants)
-        const otherParticipantId = chat.participants.find((id: ObjectId) => id.toString() !== userObjectId.toString());
+        const otherParticipantId = chat.participants.find((id: mongoose.Types.ObjectId) => id.toString() !== userObjectId.toString());
 
         console.log(`Other participant ID: ${otherParticipantId}`);
 
@@ -53,15 +65,28 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         console.log(`Other user details: ${JSON.stringify(otherUser)}`);
 
+        // Fetch the last message details from the Messages collection
+        const lastMessage = await messagesCollection.findOne(
+          { _id: chat.messageId },
+          {
+            projection: {
+              'messages.$': 1 // This will project only the last message in the array
+            }
+          }
+        );
+
+        const lastMessageContent = lastMessage?.messages[0]?.content || '';
+        const lastMessageTimestamp = lastMessage?.messages[0]?.timestamp || '';
+
         // Map to the ChatListProps format
         const chatDetails = {
           chatId: chat.chatId,
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: chat.lastMessageContent || '',
-          lastMessageDate: chat.lastMessageDate ? formatLastMessageDate(chat.lastMessageDate) : '',
+          lastMessageText: lastMessageContent,
+          lastMessageDate: lastMessageTimestamp ? formatLastMessageDate(lastMessageTimestamp) : '',
           recieverId: otherParticipantId,
-          isPinned: false, // Assume false unless you have pinning functionality
+          isPinned: false // Assume false unless you have pinning functionality
         };
 
         console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
@@ -76,7 +101,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
       success: true,
       data: resultChats,
       pagination: {
-        isMore: (page + 1) * limit < chats.length,
+        isMore: resultChats.length === limit,
         page,
         totalPages: Math.ceil(chats.length / limit),
         totalChats: chats.length
@@ -87,6 +112,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
 
 
 
