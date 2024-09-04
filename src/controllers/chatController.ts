@@ -119,24 +119,28 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
 
 
-const formatLastMessageDate = (timestamp: Date) => {
-  const now: any = new Date();
-  const messageDate: any = new Date(timestamp);
-  
-  const diffInDays = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
-  
-  if (diffInDays === 0) {
-    // Today: show time
-    return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  } else if (diffInDays === 1) {
+const formatLastMessageDate = (timestamp: Date): string => {
+  const now = new Date();
+  const messageDate = new Date(timestamp);
+
+  const isSameDay = (date1: Date, date2: Date) =>
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate();
+
+  if (isSameDay(now, messageDate)) {
+    // Today: show time in 24-hour format
+    return messageDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  } else if (
+    now.getDate() - messageDate.getDate() === 1 &&
+    now.getMonth() === messageDate.getMonth() &&
+    now.getFullYear() === messageDate.getFullYear()
+  ) {
     // Yesterday
     return 'Yesterday';
-  } else if (diffInDays < 7) {
-    // Within a week: show day name
-    return messageDate.toLocaleDateString([], { weekday: 'long' });
   } else {
-    // More than a week ago: show date
-    return messageDate.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+    // Any other day: show formatted date
+    return messageDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 };
 //
