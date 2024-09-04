@@ -19,7 +19,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const messagesCollection = db.collection('Messages');
 
     // Convert userId to ObjectId
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
 
     console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
@@ -67,10 +67,10 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         // Fetch the last message details from the Messages collection
         const lastMessage = await messagesCollection.findOne(
-          { _id: chat.messageId },
+          { chatId: chat._id }, // Match the chatId with the chat's _id
           {
             projection: {
-              'messages.$': 1 // This will project only the last message in the array
+              messages: { $slice: -1 } // Get the last message in the array
             }
           }
         );
@@ -112,6 +112,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
 
 
 
