@@ -15,16 +15,15 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const db = getDatabase();
     const chatsCollection = db.collection('Chats');
     const usersCollection = db.collection('users');
-    const messagesCollection = db.collection('Messages');
 
     // Convert userId to ObjectId
-    const userObjectId =  ObjectId.createFromHexString(userId);
+    const userObjectId = ObjectId.createFromHexString(userId);
 
     console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
-    // Fetch chats where the user is a participant
+    // Fetch chats where the user is a participant, including last message content and timestamp
     const chats = await chatsCollection
-      .find({participants: userObjectId}) 
+      .find({ participants: userObjectId })
       .skip(skip)
       .limit(limit)
       .toArray();
@@ -54,23 +53,13 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         console.log(`Other user details: ${JSON.stringify(otherUser)}`);
 
-        // Fetch the last message details
-        const lastMessage = chat.lastMessage
-          ? await messagesCollection.findOne(
-              { _id: chat.lastMessage },
-              { projection: { content: 1, timestamp: 1 } }
-            )
-          : null;
-
-        console.log(`Last message details: ${JSON.stringify(lastMessage)}`);
-
         // Map to the ChatListProps format
         const chatDetails = {
           chatId: chat.chatId,
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: lastMessage ? lastMessage.content : '',
-          lastMessageDate: lastMessage ? formatLastMessageDate(lastMessage.timestamp) : '',
+          lastMessageText: chat.lastMessageContent || '',
+          lastMessageDate: chat.lastMessageDate ? formatLastMessageDate(chat.lastMessageDate) : '',
           recieverId: otherParticipantId,
           isPinned: false, // Assume false unless you have pinning functionality
         };
@@ -98,6 +87,9 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+
+
 
 
 const formatLastMessageDate = (timestamp: Date) => {

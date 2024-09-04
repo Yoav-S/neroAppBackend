@@ -4,14 +4,14 @@ import { IUser } from './User';
 
 export interface IMessage extends Document {
   messageId: string;
-  chatId: mongoose.Types.ObjectId; // The chat to which this message belongs
-  sender: IUser['_id']; // Reference to the user who sent the message
-  content: string; // The text content of the message
-  timestamp: Date; // When the message was created
-  status: 'Not delivered' | 'Sent' | 'Delivered' | 'Read' | 'Changed' | 'In progress'; // Delivery status of the message
-  isEdited: boolean; // Flag to indicate if the message was edited
-  reactions: Array<{ userId: IUser['_id']; reaction: string }>; // List of reactions to this message
-  attachments: Array<{ attachmentId: string; type: string; url: string; thumbnail?: string }>; // List of attachments in this message
+  chatId: mongoose.Types.ObjectId;
+  sender: IUser['_id'];
+  content: string;
+  timestamp: Date;
+  status: 'Not delivered' | 'Sent' | 'Delivered' | 'Read' | 'Changed' | 'In progress';
+  isEdited: boolean;
+  reactions: Array<{ userId: IUser['_id']; reaction: string }>;
+  attachments: Array<{ attachmentId: string; type: string; url: string; thumbnail?: string }>;
 }
 
 const MessageSchema: Schema = new Schema(
@@ -27,26 +27,27 @@ const MessageSchema: Schema = new Schema(
       default: 'In progress'
     },
     isEdited: { type: Boolean, default: false },
-
-    // Reactions: stores user reactions (e.g., emojis) to the message
     reactions: [
       {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ID of the user who reacted
-        reaction: { type: String } // Type of reaction (e.g., "like", "heart", "smile")
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        reaction: { type: String }
       }
     ],
-
-    // Attachments: stores files or media included with the message
     attachments: [
       {
-        attachmentId: { type: String }, // Unique ID for the attachment
-        type: { type: String }, // Type of the attachment (e.g., "image", "video", "file")
-        url: { type: String }, // URL of the stored attachment
-        thumbnail: { type: String } // Optional thumbnail for the attachment (e.g., for images or videos)
+        attachmentId: { type: String },
+        type: { type: String },
+        url: { type: String },
+        thumbnail: { type: String }
       }
     ]
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IMessage>('Message', MessageSchema);
+// Function to dynamically create a message model for a specific chat
+const createMessageModel = (chatId: string) => {
+  return mongoose.model<IMessage>(`Message_${chatId}`, MessageSchema);
+};
+
+export default createMessageModel;

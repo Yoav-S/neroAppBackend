@@ -1,18 +1,17 @@
 // models/Chat.ts
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from './User';
-import { IMessage } from './Message';
 
 export interface IChat extends Document {
   chatId: string;
   participants: IUser['_id'][];
-  messages: IMessage['_id'][];
   createdAt: Date;
   updatedAt: Date;
   isGroupChat: boolean;
   chatName?: string;
   admin?: IUser['_id'];
-  lastMessage?: IMessage['_id'];
+  lastMessageContent?: string; // Store last message content for quick display
+  lastMessageTimestamp?: Date; // Store last message timestamp for sorting
   chatAvatar?: string;
 }
 
@@ -20,11 +19,11 @@ const ChatSchema: Schema = new Schema(
   {
     chatId: { type: String, unique: true, default: () => new mongoose.Types.ObjectId().toHexString() },
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
-    messages: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Message' }],
     isGroupChat: { type: Boolean, default: false },
     chatName: { type: String },
     admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    lastMessage: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
+    lastMessageContent: { type: String }, // New field for storing the last message content
+    lastMessageTimestamp: { type: Date }, // New field for storing the last message timestamp
     chatAvatar: { type: String }
   },
   { timestamps: true }
