@@ -206,7 +206,7 @@ export const sendEmailOTP = async (req: Request, res: Response) => {
       return res.status(200).json({ success: true, message: 'If a user with this email exists, an OTP has been sent.', otp: '00000' });
     }
 
-    const otp = otpGenerator.generate(!user ? 5 : 4, {
+    const otp = otpGenerator.generate(4, {
       upperCaseAlphabets: false,
       specialChars: false,
       lowerCaseAlphabets: false
