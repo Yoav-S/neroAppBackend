@@ -113,10 +113,82 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+export const getChatMessages = async (req: Request, res: Response) => {
+  try {
+    const { chatId, pageNumber } = req.body;
+    const pageSize = 20; // You can adjust this or make it a parameter
 
+    if (!ObjectId.isValid(chatId)) {
+      return res.status(400).json({ success: false, message: 'Invalid chat ID' });
+    }
 
+    // Ensure pageNumber is a positive integer
+    const page = Math.max(1, Math.floor(Number(pageNumber) || 1));
+    const skip = (page - 1) * pageSize;
 
+    const db = getDatabase();
+    const messagesCollection = db.collection('Messages');
 
+    const pipeline = [
+      { $match: { chatId: new ObjectId(chatId) } },
+      { $unwind: '$messages' },
+      { $sort: { 'messages.timestamp': -1 } },
+      { $skip: skip },
+      { $limit: pageSize },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'messages.sender',
+          foreignField: '_id',
+          as: 'senderInfo'
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          messageId: '$messages.messageId',
+          sender: { $arrayElemAt: ['$senderInfo._id', 0] },
+          messageText: '$messages.content',
+          messageDate: '$messages.timestamp',
+          formattedTime: { $dateToString: { format: "%H:%M", date: "$messages.timestamp" } },
+          status: '$messages.status'
+        }
+      }
+    ];
+
+    const chatMessages = await messagesCollection.aggregate(pipeline).toArray();
+
+    // Format the time for each message
+    const formattedChatMessages = chatMessages.map(message => ({
+      ...message,
+      formattedTime: formatTime(new Date(message.messageDate))
+    }));
+
+    const totalMessagesResult = await messagesCollection.aggregate([
+      { $match: { chatId: new ObjectId(chatId) } },
+      { $project: { messageCount: { $size: '$messages' } } }
+    ]).toArray();
+
+    const totalItems = totalMessagesResult[0]?.messageCount || 0;
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    const paginationResponse = {
+      success: true,
+      data: formattedChatMessages,
+      pagination: {
+        isMore: page < totalPages,
+        page: page,
+        totalPages: totalPages,
+        totalItems: totalItems
+      }
+    };
+
+    res.json(paginationResponse);
+  } catch (error) {
+    console.error('Error in getChatMessages:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 
 const formatLastMessageDate = (timestamp: Date): string => {
@@ -144,3 +216,8 @@ const formatLastMessageDate = (timestamp: Date): string => {
   }
 };
 //
+const formatTime = (date: Date): string => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};

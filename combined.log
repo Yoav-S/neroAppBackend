@@ -1534,3 +1534,17 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-04T13:07:28.644Z"}
 {"level":"info","message":"::1 - - [04/Sep/2024:13:07:31 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 912 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-04T13:07:31.635Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-04T13:08:06.878Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-08T09:22:47.510Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-08T09:22:47.514Z"}
+{"level":"info","message":"::1 - - [08/Sep/2024:09:22:54 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 500 42 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:22:54.239Z"}
+{"level":"info","message":"::1 - - [08/Sep/2024:09:23:22 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 500 42 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:23:22.352Z"}
+{"level":"info","message":"::1 - - [08/Sep/2024:09:23:24 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 500 42 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:23:24.149Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-08T09:24:40.115Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-08T09:24:40.119Z"}
+{"level":"info","message":"::1 - - [08/Sep/2024:09:24:46 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 200 672 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:24:46.297Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-08T09:27:18.159Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-08T09:27:18.163Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-08T09:27:37.233Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-08T09:27:37.245Z"}
+{"level":"info","message":"::1 - - [08/Sep/2024:09:27:37 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 200 744 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:27:37.759Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-08T09:28:24.326Z"}
