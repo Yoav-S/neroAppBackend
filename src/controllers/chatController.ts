@@ -80,6 +80,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         const lastMessageContent = lastMessage?.messages[0]?.content || '';
         const lastMessageTimestamp = lastMessage?.messages[0]?.timestamp || '';
         const lastMessageSenderId = lastMessage?.messages[0]?.sender || '';
+        const lastMessageStatus = lastMessage?.messages[0]?.status || '';
 
         // Determine if the last message sender is the user
         const isLastMessageSenderIsTheUser = lastMessageSenderId.toString() === userObjectId.toString();
@@ -99,6 +100,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           lastMessageText: lastMessageContent,
           lastMessageDate: lastMessageTimestamp ? formatLastMessageDate(lastMessageTimestamp) : '',
           isLastMessageSenderIsTheUser: isLastMessageSenderIsTheUser ? 'true' : 'false',
+          lastMessageStatus: lastMessageStatus,
           recieverId: otherParticipantId.toString(),
           isPinned: false, // Assume false unless you have pinning functionality
           messagesDidntReadAmount: unreadMessagesCount
