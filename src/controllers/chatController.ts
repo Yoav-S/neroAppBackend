@@ -180,7 +180,8 @@ export const getChatMessages = async (req: Request, res: Response) => {
           messageDate: '$messages.timestamp',
           formattedTime: { $dateToString: { format: "%H:%M", date: "$messages.timestamp" } },
           status: '$messages.status',
-          image: '$messages.imageUrl' // Include the optional image field
+          image: '$messages.imageUrl', // Include the optional image field
+          timestamp: '$messages.timestamp' // Include the timestamp field
         }
       }
     ];
@@ -192,10 +193,10 @@ export const getChatMessages = async (req: Request, res: Response) => {
       messageId: message.messageId,
       sender: message.sender,
       messageText: message.messageText,
-      timestamp: message.timestamp,
-      formattedTime: formatTime(new Date(message.messageDate)),
+      formattedTime: message.formattedTime,
       status: message.status,
       image: message.image, // Assign image field if it exists
+      timestamp: message.timestamp // Assign the timestamp field
     }));
 
     const totalMessagesResult = await messagesCollection.aggregate([
@@ -222,6 +223,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 
 
