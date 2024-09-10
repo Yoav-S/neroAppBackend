@@ -10,6 +10,7 @@ export interface IMessage extends Document {
     sender: IUser['_id'];
     content: string;
     timestamp: Date;
+    imageUrl?: string;
     status: 'Not delivered' | 'Sent' | 'Delivered' | 'Read' | 'Changed' | 'In progress';
     isEdited: boolean;
     reactions: Array<{ userId: IUser['_id']; reaction: string }>;
@@ -26,6 +27,7 @@ const MessageSchema: Schema = new Schema(
         messageId: { type: String, unique: true, default: () => new mongoose.Types.ObjectId().toHexString() },
         sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         content: { type: String, required: true },
+        imageUrl: { type: String},
         timestamp: { type: Date, default: Date.now },
         status: {
           type: String,

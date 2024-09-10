@@ -134,7 +134,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 export const getChatMessages = async (req: Request, res: Response) => {
   try {
     const { chatId, pageNumber } = req.body;
-    const pageSize = 20; // You can adjust this or make it a parameter
+    const pageSize = 20; // Adjust this or make it a parameter
 
     if (!ObjectId.isValid(chatId)) {
       return res.status(400).json({ success: false, message: 'Invalid chat ID' });
@@ -169,7 +169,8 @@ export const getChatMessages = async (req: Request, res: Response) => {
           messageText: '$messages.content',
           messageDate: '$messages.timestamp',
           formattedTime: { $dateToString: { format: "%H:%M", date: "$messages.timestamp" } },
-          status: '$messages.status'
+          status: '$messages.status',
+          image: '$messages.imageUrl' // Include the optional image field
         }
       }
     ];
@@ -177,9 +178,13 @@ export const getChatMessages = async (req: Request, res: Response) => {
     const chatMessages = await messagesCollection.aggregate(pipeline).toArray();
 
     // Format the time for each message
-    const formattedChatMessages = chatMessages.map(message => ({
-      ...message,
-      formattedTime: formatTime(new Date(message.messageDate))
+    const formattedChatMessages = chatMessages.map((message) => ({
+      messageId: message.messageId,
+      sender: message.sender,
+      messageText: message.messageText,
+      formattedTime: formatTime(new Date(message.messageDate)),
+      status: message.status,
+      image: message.image, // Assign image field if it exists
     }));
 
     const totalMessagesResult = await messagesCollection.aggregate([
@@ -203,10 +208,10 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
     res.json(paginationResponse);
   } catch (error) {
-    console.error('Error in getChatMessages:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 
 
