@@ -192,6 +192,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
       messageId: message.messageId,
       sender: message.sender,
       messageText: message.messageText,
+      timestamp: message.timestamp,
       formattedTime: formatTime(new Date(message.messageDate)),
       status: message.status,
       image: message.image, // Assign image field if it exists
