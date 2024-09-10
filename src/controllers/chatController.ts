@@ -132,7 +132,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
     const messagesCollection = db.collection('Messages');
 
     const pipeline = [
-      { $match: { chatId: new ObjectId(chatId) } },
+      { $match: { chatId: ObjectId.createFromHexString(chatId) } },
       { $unwind: '$messages' },
       { $sort: { 'messages.timestamp': -1 } },
       { $skip: skip },
@@ -167,7 +167,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
     }));
 
     const totalMessagesResult = await messagesCollection.aggregate([
-      { $match: { chatId: new ObjectId(chatId) } },
+      { $match: { chatId: ObjectId.createFromHexString(chatId) } },
       { $project: { messageCount: { $size: '$messages' } } }
     ]).toArray();
 
@@ -255,7 +255,17 @@ export const SendMessage = async (req: Request, res: Response) => {
       throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
     }
 
-    res.status(200).json({ success: true, messages: newMessages });
+    // Transform newMessages into the format expected by the frontend
+    const formattedMessages = newMessages.map((msg) => ({
+      formattedTime: formatLastMessageDate(msg.timestamp),
+      messageId: msg.messageId.toString(),
+      sender: msg.sender.toString(),
+      messageText: msg.content,
+      image: msg.imageUrl,
+      status: msg.status,
+    }));
+
+    res.status(200).json({ success: true, messages: formattedMessages });
   } catch (error) {
     console.error('Error sending message:', error);
     throw createAppError(ErrorCode.INTERNAL_SERVER_ERROR);
