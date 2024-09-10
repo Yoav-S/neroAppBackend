@@ -149,10 +149,20 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
     const pipeline = [
       { $match: { chatId: ObjectId.createFromHexString(chatId) } },
+      {
+        $project: {
+          messages: {
+            $slice: [
+              {
+                $reverseArray: "$messages" // Reverse the array to get the latest messages first
+              },
+              skip,
+              pageSize
+            ]
+          }
+        }
+      },
       { $unwind: '$messages' },
-      { $sort: { 'messages.timestamp': -1 } },
-      { $skip: skip },
-      { $limit: pageSize },
       {
         $lookup: {
           from: 'users',
@@ -211,6 +221,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 
 
