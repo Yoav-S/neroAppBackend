@@ -79,6 +79,17 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         const lastMessageContent = lastMessage?.messages[0]?.content || '';
         const lastMessageTimestamp = lastMessage?.messages[0]?.timestamp || '';
+        const lastMessageSenderId = lastMessage?.messages[0]?.sender || '';
+
+        // Determine if the last message sender is the user
+        const isLastMessageSenderIsTheUser = lastMessageSenderId.toString() === userObjectId.toString();
+
+        // Count unread messages for the user in this chat
+        const unreadMessagesCount = await messagesCollection.countDocuments({
+          chatId: chat._id,
+          'messages.recipient': userObjectId,
+          'messages.read': false
+        });
 
         // Map to the ChatListProps format
         const chatDetails = {
@@ -87,8 +98,10 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
           lastMessageText: lastMessageContent,
           lastMessageDate: lastMessageTimestamp ? formatLastMessageDate(lastMessageTimestamp) : '',
-          recieverId: otherParticipantId,
-          isPinned: false // Assume false unless you have pinning functionality
+          isLastMessageSenderIsTheUser: isLastMessageSenderIsTheUser ? 'true' : 'false',
+          recieverId: otherParticipantId.toString(),
+          isPinned: false, // Assume false unless you have pinning functionality
+          messagesDidntReadAmount: unreadMessagesCount
         };
 
         console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
@@ -114,6 +127,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
 
 export const getChatMessages = async (req: Request, res: Response) => {
   try {
