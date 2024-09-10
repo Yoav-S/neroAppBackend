@@ -67,12 +67,12 @@ export const getPostsPagination = async (req: Request, res: Response) => {
 };
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw createAppError( ErrorCode.INVALID_TOKEN);
+  }
   try {
     // Validate Bearer token
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw createAppError( ErrorCode.INVALID_TOKEN);
-    }
+
 
     const token = authHeader.split(' ')[1];
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
@@ -225,9 +225,8 @@ export const reportPost = async (req: Request, res: Response) => {
 };
 export const createPost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
-  
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, message: 'Access token is missing or invalid.' });
+    throw createAppError( ErrorCode.INVALID_TOKEN);
   }
 
   try {

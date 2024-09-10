@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-
+import { MessageType, ChatDocument } from '../utils/interfaces';
 import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your file
-
+import { IMessage } from '../models/Message';
 import { getDatabase } from '../config/database';
 import mongoose from 'mongoose';
+import { createAppError, ErrorCode } from '../utils/errors';
+import { bucket } from '../config/firebaseConfig';
 
 
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
@@ -191,6 +193,91 @@ export const getChatMessages = async (req: Request, res: Response) => {
 };
 
 
+
+export const SendMessage = async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw createAppError(ErrorCode.INVALID_TOKEN);
+  }
+
+  const { chatId, sender, messageText } = req.body;
+  const images = req.files as Express.Multer.File[];
+
+  try {
+    const db = getDatabase();
+    const messagesCollection = db.collection<ChatDocument>('Messages');
+
+    const existingMessage = await messagesCollection.findOne({ chatId: ObjectId.createFromHexString(chatId) });
+
+    if (!existingMessage) {
+      throw createAppError(ErrorCode.CHAT_NOT_FOUND);
+    }
+
+    const newMessages: MessageType[] = [];
+
+    // Add text message with first image (if exists)
+    const firstMessage: MessageType = {
+      messageId: new ObjectId(),
+      sender: ObjectId.createFromHexString(sender),
+      content: messageText,
+      imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+      timestamp: new Date(),
+      status: 'Delivered',
+      isEdited: false,
+      reactions: [],
+      attachments: []
+    };
+    newMessages.push(firstMessage);
+
+    // Add remaining images as separate messages
+    for (let i = 1; i < images.length; i++) {
+      const imageMessage: MessageType = {
+        messageId: new ObjectId(),
+        sender: ObjectId.createFromHexString(sender),
+        content: '',
+        imageUrl: await uploadImage(chatId, images[i]),
+        timestamp: new Date(),
+        status: 'Delivered',
+        isEdited: false,
+        reactions: [],
+        attachments: []
+      };
+      newMessages.push(imageMessage);
+    }
+
+    // Update the message document with new messages
+    const result = await messagesCollection.updateOne(
+      { chatId: ObjectId.createFromHexString(chatId) },
+      { $push: { messages: { $each: newMessages } } }
+    );
+
+    if (result.modifiedCount === 0) {
+      throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
+    }
+
+    res.status(200).json({ success: true, messages: newMessages });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw createAppError(ErrorCode.INTERNAL_SERVER_ERROR);
+  }
+};
+
+// Helper function to upload image and return URL
+async function uploadImage(chatId: string, image: Express.Multer.File): Promise<string> {
+  // Include 'Chats/' at the beginning of the uniqueFilename
+  const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
+  const file = bucket.file(uniqueFilename);
+  
+  await file.save(image.buffer, {
+    metadata: {
+      contentType: image.mimetype,
+    },
+    public: true,
+  });
+
+  // The URL should now include 'Chats/' in the path
+  return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+}
 const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);

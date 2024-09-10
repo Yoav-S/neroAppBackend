@@ -1548,3 +1548,37 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-08T09:27:37.245Z"}
 {"level":"info","message":"::1 - - [08/Sep/2024:09:27:37 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 200 744 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-08T09:27:37.759Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-08T09:28:24.326Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:10:07.005Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:10:07.010Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:10:20 +0000] \"POST /chats/SendMessage HTTP/1.1\" 404 157 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:10:20.512Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:10:50 +0000] \"POST /chat/SendMessage HTTP/1.1\" 401 65 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:10:50.127Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:11:41.793Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:11:41.798Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:11:54.685Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:11:54.691Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:12:02.072Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:12:02.077Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:13:05.311Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:13:05.317Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:13:07 +0000] \"POST /auth/login HTTP/1.1\" 200 998 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:13:07.698Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:13:17 +0000] \"POST /chat/SendMessage HTTP/1.1\" 500 1326 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:13:17.462Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:14:03 +0000] \"POST /chat/SendMessage HTTP/1.1\" 200 100 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:14:03.290Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:27:22.917Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:27:22.921Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:27:43.495Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:27:43.499Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:32:46.090Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:32:46.095Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:36:38.236Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:36:38.242Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:45:46.286Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:45:46.291Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:45:58 +0000] \"POST /chat/SendMessage HTTP/1.1\" 200 662 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:45:58.167Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:48:49.316Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:48:49.321Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:50:17.828Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:50:17.836Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-10T16:52:07.578Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T16:52:07.583Z"}
+{"level":"info","message":"::1 - - [10/Sep/2024:16:52:40 +0000] \"POST /chat/SendMessage HTTP/1.1\" 200 662 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T16:52:40.271Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-10T17:04:01.667Z"}
