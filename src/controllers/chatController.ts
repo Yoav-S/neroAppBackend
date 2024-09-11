@@ -68,19 +68,18 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         console.log(`Other user details: ${JSON.stringify(otherUser)}`);
 
         // Fetch the last message details from the Messages collection
-        const lastMessage = await messagesCollection.findOne(
-          { chatId: chat._id }, // Match the chatId with the chat's _id
-          {
-            projection: {
-              messages: { $slice: -1 } // Get the last message in the array
-            }
-          }
-        );
+        const lastMessage = await messagesCollection.aggregate([
+          { $match: { chatId: chat._id } }, // Match the chatId with the chat's _id
+          { $unwind: '$messages' }, // Unwind messages array
+          { $sort: { 'messages.timestamp': -1 } }, // Sort messages by timestamp in descending order
+          { $limit: 1 }, // Limit to 1 to get the latest message
+          { $project: { 'messages.content': 1, 'messages.timestamp': 1, 'messages.sender': 1, 'messages.status': 1 } } // Project necessary fields
+        ]).toArray();
 
-        const lastMessageContent = lastMessage?.messages[0]?.content || '';
-        const lastMessageTimestamp = lastMessage?.messages[0]?.timestamp || '';
-        const lastMessageSenderId = lastMessage?.messages[0]?.sender || '';
-        const lastMessageStatus = lastMessage?.messages[0]?.status || '';
+        const lastMessageContent = lastMessage[0]?.messages.content || '';
+        const lastMessageTimestamp = lastMessage[0]?.messages.timestamp || '';
+        const lastMessageSenderId = lastMessage[0]?.messages.sender || '';
+        const lastMessageStatus = lastMessage[0]?.messages.status || '';
 
         // Determine if the last message sender is the user
         const isLastMessageSenderIsTheUser = lastMessageSenderId.toString() === userObjectId.toString();
@@ -129,6 +128,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
 
 
 export const getChatMessages = async (req: Request, res: Response) => {
