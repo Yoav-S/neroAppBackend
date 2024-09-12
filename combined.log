@@ -1601,3 +1601,7 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-10T22:56:23.876Z"}
 {"level":"info","message":"::1 - - [10/Sep/2024:22:56:24 +0000] \"POST /chat/getChatMessages HTTP/1.1\" 200 1323 \"-\" \"PostmanRuntime/7.41.2\"","timestamp":"2024-09-10T22:56:24.725Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-10T22:56:34.645Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-12T10:37:19.078Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-12T10:37:19.083Z"}
+{"level":"info","message":"::1 - - [12/Sep/2024:10:37:36 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 956 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-12T10:37:36.188Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-12T11:01:11.443Z"}

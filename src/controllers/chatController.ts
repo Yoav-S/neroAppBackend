@@ -98,7 +98,7 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
           lastMessageText: lastMessageContent,
           lastMessageDate: lastMessageTimestamp ? formatLastMessageDate(lastMessageTimestamp) : '',
-          isLastMessageSenderIsTheUser: isLastMessageSenderIsTheUser ? 'true' : 'false',
+          isLastMessageSenderIsTheUser: isLastMessageSenderIsTheUser ? true : false,
           lastMessageStatus: lastMessageStatus,
           recieverId: otherParticipantId.toString(),
           isPinned: false, // Assume false unless you have pinning functionality
