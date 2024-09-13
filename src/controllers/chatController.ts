@@ -28,10 +28,11 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-      .find({ participants: userObjectId })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    .find({ participants: { $in: [userObjectId] } })
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+  
 
     console.log(`Fetched chats: ${JSON.stringify(chats)}`);
 
@@ -100,10 +101,10 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           chatId: chat.chatId,
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: recentMessages[0]?.content || '',
-          lastMessageDate: recentMessages[0]?.timestamp ? formatLastMessageDate(recentMessages[0].timestamp) : '',
-          isLastMessageSenderIsTheUser: recentMessages[0]?.sender.toString() === userObjectId.toString(),
-          lastMessageStatus: recentMessages[0]?.status || '',
+          lastMessageText: recentMessages[recentMessages.length - 1]?.content || '',
+          lastMessageDate: recentMessages[recentMessages.length - 1]?.timestamp ? formatLastMessageDate(recentMessages[recentMessages.length - 1].timestamp) : '',
+          isLastMessageSenderIsTheUser: recentMessages[recentMessages.length - 1]?.sender.toString() === userObjectId.toString(),
+          lastMessageStatus: recentMessages[recentMessages.length - 1]?.status || '',
           recieverId: otherParticipantId.toString(),
           isPinned: false, // Assume false unless you have pinning functionality
           messagesDidntReadAmount: unreadMessagesCount,
