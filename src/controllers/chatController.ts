@@ -8,6 +8,7 @@ import { createAppError, ErrorCode } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
 
 
+
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, page = 0 } = req.body;
@@ -67,42 +68,46 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         console.log(`Other user details: ${JSON.stringify(otherUser)}`);
 
-        // Fetch the last message details from the Messages collection
-        const lastMessage = await messagesCollection.aggregate([
-          { $match: { chatId: chat._id } }, // Match the chatId with the chat's _id
-          { $unwind: '$messages' }, // Unwind messages array
-          { $sort: { 'messages.timestamp': -1 } }, // Sort messages by timestamp in descending order
-          { $limit: 1 }, // Limit to 1 to get the latest message
-          { $project: { 'messages.content': 1, 'messages.timestamp': 1, 'messages.sender': 1, 'messages.status': 1 } } // Project necessary fields
-        ]).toArray();
+        // Fetch all messages for this chat
+        const allMessages = await messagesCollection.findOne(
+          { chatId: chat._id },
+          { projection: { messages: 1 } }
+        );
 
-        const lastMessageContent = lastMessage[0]?.messages.content || '';
-        const lastMessageTimestamp = lastMessage[0]?.messages.timestamp || '';
-        const lastMessageSenderId = lastMessage[0]?.messages.sender || '';
-        const lastMessageStatus = lastMessage[0]?.messages.status || '';
-
-        // Determine if the last message sender is the user
-        const isLastMessageSenderIsTheUser = lastMessageSenderId.toString() === userObjectId.toString();
-
-        // Count unread messages for the user in this chat
-        const unreadMessagesCount = await messagesCollection.countDocuments({
-          chatId: chat._id,
-          'messages.recipient': userObjectId,
-          'messages.read': false
-        });
+        let unreadMessagesCount = 0;
+        let recentMessages = [];
+        
+        if (allMessages && allMessages.messages) {
+          // Reverse the messages array to start from the most recent
+          const reversedMessages = allMessages.messages.reverse();
+          
+          for (const message of reversedMessages) {
+            if (message.sender.toString() !== userObjectId.toString() && message.status !== 'Read') {
+              unreadMessagesCount++;
+              recentMessages.push(message);
+            } else {
+              // Stop counting if we reach a message from the user or a read message
+              break;
+            }
+          }
+          
+          // Limit recent messages to the last 20 (or any other number you prefer)
+          recentMessages = recentMessages.slice(0, 20).reverse();
+        }
 
         // Map to the ChatListProps format
         const chatDetails = {
           chatId: chat.chatId,
           profilePicture: otherUser ? otherUser.picture : '',
           fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: lastMessageContent,
-          lastMessageDate: lastMessageTimestamp ? formatLastMessageDate(lastMessageTimestamp) : '',
-          isLastMessageSenderIsTheUser: isLastMessageSenderIsTheUser ? true : false,
-          lastMessageStatus: lastMessageStatus,
+          lastMessageText: recentMessages[0]?.content || '',
+          lastMessageDate: recentMessages[0]?.timestamp ? formatLastMessageDate(recentMessages[0].timestamp) : '',
+          isLastMessageSenderIsTheUser: recentMessages[0]?.sender.toString() === userObjectId.toString(),
+          lastMessageStatus: recentMessages[0]?.status || '',
           recieverId: otherParticipantId.toString(),
           isPinned: false, // Assume false unless you have pinning functionality
-          messagesDidntReadAmount: unreadMessagesCount
+          messagesDidntReadAmount: unreadMessagesCount,
+          recentMessages: recentMessages
         };
 
         console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
