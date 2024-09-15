@@ -9,11 +9,15 @@ import { bucket } from '../config/firebaseConfig';
 
 
 
+
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, page = 0 } = req.body;
     const limit = 7;
     const skip = page * limit;
+
+    // Convert userId to ObjectId
+    const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
 
     // Connect to the database
     const db = getDatabase();
@@ -21,24 +25,18 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
     const usersCollection = db.collection('users');
     const messagesCollection = db.collection('Messages');
 
-    // Convert userId to ObjectId
-    const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
-
-    console.log(`Fetching chats for user: ${userId} (ObjectId: ${userObjectId}), Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
+    console.log(`Fetching chats for user: ${userId}, Page: ${page}, Limit: ${limit}`);
 
     // Fetch chats where the user is a participant
     const chats = await chatsCollection
-    .find({ participants: { $in: [userObjectId] } })
-    .skip(skip)
-    .limit(limit)
-    .toArray();
-  
+      .find({ participants: { $in: [userObjectId] } })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
 
-    console.log(`Fetched chats: ${JSON.stringify(chats)}`);
+    console.log(`Fetched chats: ${chats.length} chats found`);
 
-    // Check if chats were found
     if (!chats || chats.length === 0) {
-      console.log('No chats found for the user.');
       return res.status(200).json({
         success: true,
         data: [],
@@ -46,30 +44,23 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           isMore: false,
           page,
           totalPages: 0,
-          totalChats: 0
-        }
+          totalChats: 0,
+        },
       });
     }
 
-    // Prepare an array to store the result with other user details
+    // Map chat details
     const resultChats = await Promise.all(
       chats.map(async (chat) => {
-        console.log(`Processing chat: ${chat.chatId}`);
+        const otherParticipantIds = chat.participants.filter(
+          (id: mongoose.Types.ObjectId) => id.toString() !== userObjectId.toString()
+        );
 
-        // Determine the other participant's ID (assuming only 2 participants)
-        const otherParticipantId = chat.participants.find((id: mongoose.Types.ObjectId) => id.toString() !== userObjectId.toString());
-
-        console.log(`Other participant ID: ${otherParticipantId}`);
-
-        // Fetch the other user's profile information
         const otherUser = await usersCollection.findOne(
-          { _id: otherParticipantId },
+          { _id: { $in: otherParticipantIds } },
           { projection: { picture: 1, firstName: 1, lastName: 1 } }
         );
 
-        console.log(`Other user details: ${JSON.stringify(otherUser)}`);
-
-        // Fetch all messages for this chat
         const allMessages = await messagesCollection.findOne(
           { chatId: chat._id },
           { projection: { messages: 1 } }
@@ -77,48 +68,51 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
 
         let unreadMessagesCount = 0;
         let recentMessages = [];
-        
-        if (allMessages && allMessages.messages) {
-          // Reverse the messages array to start from the most recent
-          const reversedMessages = allMessages.messages.reverse();
-          
-          for (const message of reversedMessages) {
-            if (message.sender.toString() !== userObjectId.toString() && message.status !== 'Read') {
+
+        if (allMessages?.messages) {
+          recentMessages = allMessages.messages.slice(-20).reverse();
+
+          for (const message of recentMessages) {
+            if (
+              message.sender.toString() !== userObjectId.toString() &&
+              message.status !== 'Read'
+            ) {
               unreadMessagesCount++;
-              recentMessages.push(message);
             } else {
-              // Stop counting if we reach a message from the user or a read message
               break;
             }
           }
-          
-          // Limit recent messages to the last 20 (or any other number you prefer)
-          recentMessages = recentMessages.slice(0, 20).reverse();
+
+          recentMessages = recentMessages.reverse();
         }
 
-        // Map to the ChatListProps format
-        const chatDetails = {
+        return {
           chatId: chat.chatId,
-          profilePicture: otherUser ? otherUser.picture : '',
-          fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: recentMessages[recentMessages.length - 1]?.content || '',
-          lastMessageDate: recentMessages[recentMessages.length - 1]?.timestamp ? formatLastMessageDate(recentMessages[recentMessages.length - 1].timestamp) : '',
-          isLastMessageSenderIsTheUser: recentMessages[recentMessages.length - 1]?.sender.toString() === userObjectId.toString(),
-          lastMessageStatus: recentMessages[recentMessages.length - 1]?.status || '',
-          recieverId: otherParticipantId.toString(),
-          isPinned: false, // Assume false unless you have pinning functionality
+          profilePicture: otherUser?.picture || '',
+          fullName: otherUser
+            ? `${otherUser.firstName} ${otherUser.lastName}`
+            : '',
+          lastMessageText:
+            recentMessages[recentMessages.length - 1]?.content || '',
+          lastMessageDate: recentMessages[recentMessages.length - 1]?.timestamp
+            ? new Date(recentMessages[recentMessages.length - 1].timestamp).toLocaleString()
+            : '',
+          isLastMessageSenderIsTheUser:
+            recentMessages[recentMessages.length - 1]?.sender.toString() ===
+            userObjectId.toString(),
+          lastMessageStatus:
+            recentMessages[recentMessages.length - 1]?.status || '',
+          recieverId: otherParticipantIds.toString(),
+          isPinned: false, // Modify if pinning feature is present
           messagesDidntReadAmount: unreadMessagesCount,
-          recentMessages: recentMessages
+          recentMessages: recentMessages,
         };
-
-        console.log(`Mapped chat details: ${JSON.stringify(chatDetails)}`);
-        return chatDetails;
       })
     );
 
-    console.log('Final resultChats:', resultChats);
+    console.log('resulted chats', resultChats);
 
-    // Send the response with the chats and pagination info
+    // Send the response
     res.status(200).json({
       success: true,
       data: resultChats,
@@ -126,14 +120,15 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
         isMore: resultChats.length === limit,
         page,
         totalPages: Math.ceil(chats.length / limit),
-        totalChats: chats.length
-      }
+        totalChats: chats.length,
+      },
     });
   } catch (error) {
     console.error('Error in getUserChats:', error);
     next(error);
   }
 };
+
 
 
 

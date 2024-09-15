@@ -1,4 +1,3 @@
-// models/Chat.ts
 import mongoose, { Document, Schema } from 'mongoose';
 import { IUser } from './User';
 
