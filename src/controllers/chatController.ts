@@ -10,6 +10,48 @@ import { bucket } from '../config/firebaseConfig';
 
 
 
+// Helper functions
+
+
+
+
+// Helper functions
+const formatLastMessageDate = (timestamp: Date): string => {
+  const now = new Date();
+  const messageDate = new Date(timestamp);
+
+  const isSameDay = (date1: Date, date2: Date) =>
+    date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate();
+
+  const isYesterday = (date: Date) => {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return isSameDay(yesterday, date);
+  };
+
+  if (isSameDay(now, messageDate)) {
+    // Today: show time in 24-hour format
+    return messageDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  } else if (isYesterday(messageDate)) {
+    // Yesterday
+    return 'Yesterday';
+  } else {
+    // Any other day: show formatted date as DD/M/YYYY
+    const day = messageDate.getDate().toString().padStart(2, '0');
+    const month = (messageDate.getMonth() + 1).toString(); // +1 because months are 0-indexed
+    const year = messageDate.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+};
+
+const formatTime = (date: Date): string => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 export const getUserChats = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { userId, page = 0 } = req.body;
@@ -86,22 +128,21 @@ export const getUserChats = async (req: Request, res: Response, next: NextFuncti
           recentMessages = recentMessages.reverse();
         }
 
+        const lastMessage = recentMessages[recentMessages.length - 1];
+
         return {
           chatId: chat.chatId,
           profilePicture: otherUser?.picture || '',
           fullName: otherUser
             ? `${otherUser.firstName} ${otherUser.lastName}`
             : '',
-          lastMessageText:
-            recentMessages[recentMessages.length - 1]?.content || '',
-          lastMessageDate: recentMessages[recentMessages.length - 1]?.timestamp
-            ? new Date(recentMessages[recentMessages.length - 1].timestamp).toLocaleString()
+          lastMessageText: lastMessage?.content || '',
+          lastMessageDate: lastMessage?.timestamp
+            ? formatLastMessageDate(new Date(lastMessage.timestamp))
             : '',
           isLastMessageSenderIsTheUser:
-            recentMessages[recentMessages.length - 1]?.sender.toString() ===
-            userObjectId.toString(),
-          lastMessageStatus:
-            recentMessages[recentMessages.length - 1]?.status || '',
+            lastMessage?.sender.toString() === userObjectId.toString(),
+          lastMessageStatus: lastMessage?.status || '',
           recieverId: otherParticipantIds.toString(),
           isPinned: false, // Modify if pinning feature is present
           messagesDidntReadAmount: unreadMessagesCount,
@@ -324,33 +365,3 @@ async function uploadImage(chatId: string, image: Express.Multer.File): Promise<
   // The URL should now include 'Chats/' in the path
   return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
 }
-const formatLastMessageDate = (timestamp: Date): string => {
-  const now = new Date();
-  const messageDate = new Date(timestamp);
-
-  const isSameDay = (date1: Date, date2: Date) =>
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate();
-
-  if (isSameDay(now, messageDate)) {
-    // Today: show time in 24-hour format
-    return messageDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  } else if (
-    now.getDate() - messageDate.getDate() === 1 &&
-    now.getMonth() === messageDate.getMonth() &&
-    now.getFullYear() === messageDate.getFullYear()
-  ) {
-    // Yesterday
-    return 'Yesterday';
-  } else {
-    // Any other day: show formatted date
-    return messageDate.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
-  }
-};
-//
-const formatTime = (date: Date): string => {
-  const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  return `${hours}:${minutes}`;
-};

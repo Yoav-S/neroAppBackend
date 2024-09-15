@@ -1680,3 +1680,12 @@
 {"level":"info","message":"::1 - - [15/Sep/2024:09:14:24 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 6008 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:14:24.100Z"}
 {"level":"info","message":"::1 - - [15/Sep/2024:09:14:38 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 6011 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:14:38.328Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-15T09:15:16.656Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-15T09:22:22.419Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-15T09:22:22.427Z"}
+{"level":"info","message":"::1 - - [15/Sep/2024:09:22:23 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 6004 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:22:23.968Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-15T09:25:22.872Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-15T09:25:22.877Z"}
+{"level":"info","message":"::1 - - [15/Sep/2024:09:25:29 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 6001 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:25:29.323Z"}
+{"level":"info","message":"::1 - - [15/Sep/2024:09:26:53 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 6001 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:26:53.012Z"}
+{"level":"info","message":"::1 - - [15/Sep/2024:09:27:13 +0000] \"POST /chat/getUserChats HTTP/1.1\" 200 5997 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T09:27:13.952Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-15T09:27:49.311Z"}
