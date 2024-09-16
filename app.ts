@@ -11,6 +11,7 @@ import './src/config/firebaseConfig'; // Import to initialize Firebase and log
 import { ENV } from './src/config/env';
 import { socketMiddleware } from './src/utils/socket';
 
+
 dotenv.config();
 
 const app = express();
