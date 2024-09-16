@@ -6,6 +6,7 @@ import { getDatabase } from '../config/database';
 import mongoose from 'mongoose';
 import { createAppError, ErrorCode } from '../utils/errors';
 import { bucket } from '../config/firebaseConfig';
+import { Server as SocketIOServer } from 'socket.io';
 
 
 
@@ -271,12 +272,7 @@ export const getChatMessages = async (req: Request, res: Response) => {
 
 
 
-export const SendMessage = async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw createAppError(ErrorCode.INVALID_TOKEN);
-  }
-
+export const SendMessage = (io: SocketIOServer) => async (req: Request, res: Response) => {
   const { chatId, sender, messageText } = req.body;
   const images = req.files as Express.Multer.File[];
 
@@ -285,14 +281,11 @@ export const SendMessage = async (req: Request, res: Response) => {
     const messagesCollection = db.collection<ChatDocument>('Messages');
 
     const existingMessage = await messagesCollection.findOne({ chatId: ObjectId.createFromHexString(chatId) });
-
-    if (!existingMessage) {
-      throw createAppError(ErrorCode.CHAT_NOT_FOUND);
-    }
+    if (!existingMessage) throw createAppError(ErrorCode.CHAT_NOT_FOUND);
 
     const newMessages: MessageType[] = [];
 
-    // Add text message with first image (if exists)
+    // Add the text message with the first image (if exists)
     const firstMessage: MessageType = {
       messageId: new ObjectId(),
       sender: ObjectId.createFromHexString(sender),
@@ -306,7 +299,6 @@ export const SendMessage = async (req: Request, res: Response) => {
     };
     newMessages.push(firstMessage);
 
-    // Add remaining images as separate messages
     for (let i = 1; i < images.length; i++) {
       const imageMessage: MessageType = {
         messageId: new ObjectId(),
@@ -322,17 +314,13 @@ export const SendMessage = async (req: Request, res: Response) => {
       newMessages.push(imageMessage);
     }
 
-    // Update the message document with new messages
     const result = await messagesCollection.updateOne(
       { chatId: ObjectId.createFromHexString(chatId) },
       { $push: { messages: { $each: newMessages } } }
     );
 
-    if (result.modifiedCount === 0) {
-      throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
-    }
+    if (result.modifiedCount === 0) throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
 
-    // Transform newMessages into the format expected by the frontend
     const formattedMessages = newMessages.map((msg) => ({
       formattedTime: formatLastMessageDate(msg.timestamp),
       messageId: msg.messageId.toString(),
@@ -341,6 +329,9 @@ export const SendMessage = async (req: Request, res: Response) => {
       image: msg.imageUrl,
       status: msg.status,
     }));
+
+    // Emit the message to all clients in the chat room
+    io.to(chatId).emit('newMessage', formattedMessages);
 
     res.status(200).json({ success: true, messages: formattedMessages });
   } catch (error) {
