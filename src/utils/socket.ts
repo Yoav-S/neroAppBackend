@@ -1,28 +1,12 @@
-import { Server as SocketIOServer } from 'socket.io';
-import { logger } from '../utils/logger';
-import { Request, Response, NextFunction } from 'express';
-import { Server as HTTPServer } from 'http';
+import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
-import { formatLastMessageDate } from '../controllers/chatController';
 import { getDatabase } from '../config/database';
-
-// Extend the Express Request type to include the io object
-declare module 'express-serve-static-core' {
-  interface Request {
-    io?: SocketIOServer;
-  }
-}
-
-let io: SocketIOServer | null = null;
-
-export const socketMiddleware = (httpServer: HTTPServer) => {
-  // Initialize Socket.IO and attach to the HTTP server
-  io = new SocketIOServer(httpServer);
-
-// In your backend socket config
-io.on('connection', (socket) => {
-  console.log(`Socket connected: ${socket.id}`);
-
+import { formatLastMessageDate } from '../controllers/chatController';
+import { uploadImage } from '../controllers/chatController';
+export const socketHandler = (io: Server) => {
+  io.on('connection', (socket: Socket) => {
+    
+    // Handle fetching chat messages
   socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
     try {
       const limit = 7;
@@ -140,17 +124,145 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log(`Socket disconnected: ${socket.id}`);
+
+
+    // Handle sending a message
+    socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
+      try {
+        const pageSize = 20;
+        const page = Math.max(1, Math.floor(Number(pageNumber) || 1));
+        const skip = (page - 1) * pageSize;
+
+        const db = getDatabase();
+        const messagesCollection = db.collection('Messages');
+
+        const pipeline = [
+          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
+          { $project: { messages: { $slice: [{ $reverseArray: '$messages' }, skip, pageSize] } } },
+          { $unwind: '$messages' },
+          { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
+          {
+            $project: {
+              messageId: '$messages.messageId',
+              sender: { $arrayElemAt: ['$senderInfo._id', 0] },
+              messageText: '$messages.content',
+              formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
+              status: '$messages.status',
+              image: '$messages.imageUrl',
+              timestamp: '$messages.timestamp',
+            },
+          },
+        ];
+
+        const chatMessages = await messagesCollection.aggregate(pipeline).toArray();
+
+        const totalMessagesResult = await messagesCollection.aggregate([
+          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
+          { $project: { messageCount: { $size: '$messages' } } },
+        ]).toArray();
+
+        const totalItems = totalMessagesResult[0]?.messageCount || 0;
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        const formattedChatMessages = chatMessages.map((message) => ({
+          messageId: message.messageId,
+          sender: message.sender,
+          messageText: message.messageText,
+          formattedTime: message.formattedTime,
+          status: message.status,
+          image: message.image,
+          timestamp: message.timestamp,
+        }));
+
+        const response = {
+          success: true,
+          data: formattedChatMessages,
+          pagination: {
+            isMore: page < totalPages,
+            page: page,
+            totalPages: totalPages,
+            totalItems: totalItems,
+          },
+        };
+
+        socket.emit('chatMessagesResponse', response);
+      } catch (error) {
+        console.error('Error in getChatMessages:', error);
+        socket.emit('error', { message: 'Server error' });
+      }
+    });
+
+    // Handle sending a message
+    socket.on('sendMessage', async ({ chatId, sender, messageText, images }: any) => {
+      try {
+        const db = getDatabase();
+        const messagesCollection = db.collection('Messages');
+
+        const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
+        if (!existingMessage) {
+          return socket.emit('error', { message: 'Chat not found' });
+        }
+
+        const newMessages: any[] = [];
+
+        const firstMessage = {
+          messageId: new mongoose.Types.ObjectId(),
+          sender: mongoose.Types.ObjectId.createFromHexString(sender),
+          content: messageText,
+          imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+          timestamp: new Date(),
+          status: 'Delivered',
+          isEdited: false,
+          reactions: [],
+          attachments: [],
+        };
+
+        newMessages.push(firstMessage);
+
+        for (let i = 1; i < images.length; i++) {
+          const imageMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: '',
+            imageUrl: await uploadImage(chatId, images[i]),
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(imageMessage);
+        }
+
+        const result = await messagesCollection.updateOne(
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { push: { messages: { $each: newMessages } } }
+        );
+
+        if (result.modifiedCount === 0) {
+          throw new Error('Failed to send message');
+        }
+
+        const formattedMessages = newMessages.map((msg) => ({
+          formattedTime: formatLastMessageDate(msg.timestamp),
+          messageId: msg.messageId.toString(),
+          sender: msg.sender.toString(),
+          messageText: msg.content,
+          image: msg.imageUrl,
+          status: msg.status,
+        }));
+
+        io.to(chatId).emit('newMessage', formattedMessages);
+
+        socket.emit('messageSent', { success: true, messages: formattedMessages });
+      } catch (error) {
+        console.error('Error sending message:', error);
+        socket.emit('error', { message: 'Error sending message' });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`Socket disconnected: ${socket.id}`);
+    });
   });
-});
-
-
-  // Middleware to attach the io object to the request
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (io) {
-      req.io = io;
-    }
-    next();
-  };
 };
