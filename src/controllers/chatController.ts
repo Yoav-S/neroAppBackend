@@ -17,7 +17,7 @@ import { Server as SocketIOServer } from 'socket.io';
 
 
 // Helper functions
-const formatLastMessageDate = (timestamp: Date): string => {
+export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
 
