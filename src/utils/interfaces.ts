@@ -26,8 +26,3 @@ export interface Filters {
     attachments: Array<{ attachmentId: string; type: string; url: string; thumbnail?: string }>;
   }
   
-  export interface ChatDocument extends Document {
-    _id: ObjectId;
-    chatId: ObjectId;
-    messages: MessageType[];
-  }

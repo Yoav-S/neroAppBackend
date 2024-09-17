@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { MessageType, ChatDocument } from '../utils/interfaces';
+import { MessageType } from '../utils/interfaces';
 import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your file
 import { IMessage } from '../models/Message';
 import { getDatabase } from '../config/database';
@@ -278,7 +278,7 @@ export const SendMessage = (io: SocketIOServer) => async (req: Request, res: Res
 
   try {
     const db = getDatabase();
-    const messagesCollection = db.collection<ChatDocument>('Messages');
+    const messagesCollection = db.collection('Messages');
 
     const existingMessage = await messagesCollection.findOne({ chatId: ObjectId.createFromHexString(chatId) });
     if (!existingMessage) throw createAppError(ErrorCode.CHAT_NOT_FOUND);
@@ -316,7 +316,7 @@ export const SendMessage = (io: SocketIOServer) => async (req: Request, res: Res
 
     const result = await messagesCollection.updateOne(
       { chatId: ObjectId.createFromHexString(chatId) },
-      { $push: { messages: { $each: newMessages } } }
+      { push: { messages: { $each: newMessages } } }
     );
 
     if (result.modifiedCount === 0) throw createAppError(ErrorCode.FILE_UPLOAD_ERROR);
