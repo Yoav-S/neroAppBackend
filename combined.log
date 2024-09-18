@@ -1693,3 +1693,6 @@
 {"level":"info","message":"Server running on port 3000","timestamp":"2024-09-15T15:46:09.694Z"}
 {"level":"info","message":"::1 - - [15/Sep/2024:15:47:01 +0000] \"POST /auth/login HTTP/1.1\" 200 998 \"-\" \"PostmanRuntime/7.42.0\"","timestamp":"2024-09-15T15:47:01.537Z"}
 {"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-15T16:28:11.253Z"}
+{"level":"info","message":"Connected successfully to MongoDB","timestamp":"2024-09-18T09:43:08.468Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2024-09-18T09:43:08.472Z"}
+{"level":"info","message":"MongoDB connection closed","timestamp":"2024-09-18T09:43:09.149Z"}

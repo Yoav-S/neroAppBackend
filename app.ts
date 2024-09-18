@@ -9,8 +9,6 @@ import { logger } from './src/utils/logger';
 import { closeDatabaseConnection, initializeDatabase } from './src/config/database';
 import './src/config/firebaseConfig'; // Import to initialize Firebase and log
 import { ENV } from './src/config/env';
-import { socketMiddleware } from './src/utils/socket';
-
 
 dotenv.config();
 
@@ -26,7 +24,6 @@ app.use(helmet());
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 
 // Use the Socket.IO middleware
-app.use(socketMiddleware(httpServer));
 
 // Routes
 configureRoutes(app);
