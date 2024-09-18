@@ -4,16 +4,19 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { createServer } from 'http';
+import { Server } from 'socket.io';  // Import Socket.IO
 import { configureRoutes } from './src/routes';
 import { logger } from './src/utils/logger';
 import { closeDatabaseConnection, initializeDatabase } from './src/config/database';
 import './src/config/firebaseConfig'; // Import to initialize Firebase and log
 import { ENV } from './src/config/env';
+import { socketHandler } from './src/utils/socket';
+
 
 dotenv.config();
 
 const app = express();
-const httpServer = createServer(app);
+const httpServer = createServer(app);  // Create HTTP server
 const port = ENV.PORT || 3000;
 
 // Middleware
@@ -23,7 +26,16 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 
-// Use the Socket.IO middleware
+// Initialize Socket.IO and pass the httpServer to it
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',  // Allow all origins (adjust for production)
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Use the socket handler
+socketHandler(io);
 
 // Routes
 configureRoutes(app);
