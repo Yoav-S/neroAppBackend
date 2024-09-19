@@ -88,14 +88,14 @@ export const socketHandler = (io: Server) => {
               recentMessages = recentMessages.reverse();
     
               // Map messages to the expected format
-              recentMessages = recentMessages.map((message: MessageType) => ({
-                formattedTime: new Date(message.timestamp).toLocaleTimeString(),
+              recentMessages = recentMessages.map((message: any) => ({
+                messageId: message.messageId,
+                sender: message.sender,
+                messageText: message.messageText,
+                formattedTime: message.formattedTime,
+                status: message.status,
+                image: message.image,
                 timestamp: message.timestamp,
-                messageId: message.messageId ? message.messageId.toString() : undefined,
-                sender: message.sender.toString(),
-                messageText: message.content || '',
-                image: message.imageUrl || null,
-                status: message.status || 'Sent',
               }));
             }
     
