@@ -62,8 +62,9 @@ export const socketHandler = (io: Server) => {
             // Use a pipeline to fetch and format the recent messages
             const pipeline = [
               { $match: { chatId: chat._id } },
-              { $project: { messages: { $slice: ['$messages', -20] } } }, // Slice the last 20 messages
               { $unwind: '$messages' },
+              { $sort: { 'messages.timestamp': -1 } },  // Sort messages from newest to oldest
+              { $limit: 20 },  // Limit the number of messages to 20
               { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
               {
                 $project: {
@@ -76,10 +77,12 @@ export const socketHandler = (io: Server) => {
                   timestamp: '$messages.timestamp',
                 },
               },
-              { $sort: { 'messages.timestamp': 1 } } // Sort messages by timestamp in ascending order
             ];
     
             const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
+            
+            // Reverse the order to match the getChatMessages direction
+            recentMessages.reverse();
     
             let unreadMessagesCount = 0;
             for (const message of recentMessages) {
@@ -130,6 +133,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
     
     
