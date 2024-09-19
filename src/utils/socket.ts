@@ -210,7 +210,8 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-
+        console.log(chatId, sender, messageText, images);
+        
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
