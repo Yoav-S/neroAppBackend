@@ -211,10 +211,10 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        const messageText = formData.get('messageText');
-        const sender = formData.get('sender');
-        const chatId = formData.get('chatId');
-        const images = formData.getAll('imagesUrl');
+        const messageText = formData.json('messageText');
+        const sender = formData.json('sender');
+        const chatId = formData.json('chatId');
+        const images = formData.json('imagesUrl');
     
         console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
     
