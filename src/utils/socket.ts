@@ -63,7 +63,7 @@ export const socketHandler = (io: Server) => {
             const pipeline = [
               { $match: { chatId: chat._id } },
               { $unwind: '$messages' },
-              { $sort: { 'messages.timestamp': 1 } },  // Sort messages from oldest to newest
+              { $sort: { 'messages.timestamp': -1 } },  // Sort messages from newest to oldest
               { $limit: 20 },  // Limit the number of messages to 20
               { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
               {
@@ -80,8 +80,10 @@ export const socketHandler = (io: Server) => {
             ];
     
             const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
+            
+            // Reverse the order to match the getChatMessages direction
+            recentMessages.reverse();
     
-            // Calculate unread messages count
             let unreadMessagesCount = 0;
             for (const message of recentMessages) {
               if (
@@ -131,7 +133,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
-    
     
     
     
