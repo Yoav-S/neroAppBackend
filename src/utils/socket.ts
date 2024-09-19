@@ -212,7 +212,12 @@ export const socketHandler = (io: Server) => {
         const messagesCollection = db.collection('Messages');
     
         const { messageText, sender, chatId, images } = payload;
-    
+        console.log('messge text:', messageText)
+        console.log('sender', sender);
+        console.log('chatId',chatId);
+        console.log('images', images);
+        
+        
         if (!sender || !chatId) {
           return socket.emit('error', { message: 'Invalid data' });
         }
