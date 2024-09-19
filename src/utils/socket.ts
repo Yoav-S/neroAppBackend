@@ -206,32 +206,28 @@ export const socketHandler = (io: Server) => {
     });
 
     // Handle sending a message
-    socket.on('sendMessage', async (payload) => {
-      console.log(payload);
-      
+    socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        const { messageText, sender, chatId, images } = payload;
-        console.log('messge text:', messageText)
-        console.log('sender', sender);
-        console.log('chatId',chatId);
-        console.log('images', images);
-        
-        
-        if (!sender || !chatId) {
-          return socket.emit('error', { message: 'Invalid data' });
-        }
+        const messageText = formData.get('messageText');
+        const sender = formData.get('sender');
+        const chatId = formData.get('chatId');
+        const images = formData.getAll('imagesUrl');
+    
+        console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
+    
+        console.log('Received data:', { chatId, sender, messageText, imageCount: images.length });
     
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
-        const newMessages = [];
+        const newMessages: any[] = [];
     
-        // Handle text message
+        // Handle text message (if any)
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
@@ -247,14 +243,14 @@ export const socketHandler = (io: Server) => {
           newMessages.push(textMessage);
         }
     
-        // Handle images
+        // Handle image messages
         if (images && images.length > 0) {
           for (let i = 0; i < images.length; i++) {
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, images[i]), // You can handle base64 decoding here
+              imageUrl: await uploadImage(chatId, images[i]),
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -290,7 +286,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
