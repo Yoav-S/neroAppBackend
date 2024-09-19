@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
+import { MessageType } from './interfaces';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -11,122 +12,133 @@ export const socketHandler = (io: Server) => {
     
 
     // Handle fetching chat messages
-  socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
-    try {
-      const limit = 7;
-      const skip = pageNumber * limit;
-
-      // Convert userId to ObjectId
-      const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
-
-      // Connect to the database
-      const db = getDatabase();
-      const chatsCollection = db.collection('Chats');
-      const usersCollection = db.collection('users');
-      const messagesCollection = db.collection('Messages');
-
-      console.log(`Fetching chats for user: ${userId}, Page: ${pageNumber}, Limit: ${limit}`);
-
-      // Fetch chats where the user is a participant
-      const chats = await chatsCollection
-        .find({ participants: { $in: [userObjectId] } })
-        .skip(skip)
-        .limit(limit)
-        .toArray();
-
-      console.log(`Fetched chats: ${chats.length} chats found`);
-
-      if (!chats || chats.length === 0) {
-        return socket.emit('chatsPaginationResponse', {
+    socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
+      try {
+        const limit = 7;
+        const skip = pageNumber * limit;
+    
+        // Convert userId to ObjectId
+        const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
+    
+        // Connect to the database
+        const db = getDatabase();
+        const chatsCollection = db.collection('Chats');
+        const usersCollection = db.collection('users');
+        const messagesCollection = db.collection('Messages');
+    
+        // Fetch chats where the user is a participant
+        const chats = await chatsCollection
+          .find({ participants: { $in: [userObjectId] } })
+          .skip(skip)
+          .limit(limit)
+          .toArray();
+    
+        if (!chats || chats.length === 0) {
+          return socket.emit('chatsPaginationResponse', {
+            success: true,
+            data: [],
+            pagination: {
+              isMore: false,
+              page: pageNumber,
+              totalPages: 0,
+              totalChats: 0,
+            },
+          });
+        }
+    
+        // Map chat details
+        const resultChats = await Promise.all(
+          chats.map(async (chat) => {
+            const otherParticipantIds = chat.participants.filter(
+              (id: Object) => id.toString() !== userObjectId.toString()
+            );
+    
+            // Fetch the other user info
+            const otherUser = await usersCollection.findOne(
+              { _id: { $in: otherParticipantIds } },
+              { projection: { picture: 1, firstName: 1, lastName: 1 } }
+            );
+    
+            // Fetch messages for the current chat
+            const allMessages = await messagesCollection.findOne(
+              { chatId: chat._id },
+              { projection: { messages: 1 } }
+            );
+    
+            let unreadMessagesCount = 0;
+            let recentMessages = [];
+    
+            if (allMessages?.messages) {
+              // Slice and reverse the last 20 messages
+              recentMessages = allMessages.messages.slice(-20).reverse();
+    
+              // Calculate unread messages count
+              for (const message of recentMessages) {
+                if (
+                  message.sender.toString() !== userObjectId.toString() &&
+                  message.status !== 'Read'
+                ) {
+                  unreadMessagesCount++;
+                } else {
+                  break;
+                }
+              }
+    
+              // Reverse back to the original order
+              recentMessages = recentMessages.reverse();
+    
+              // Map messages to the expected format
+              recentMessages = recentMessages.map((message: MessageType) => ({
+                formattedTime: new Date(message.timestamp).toLocaleTimeString(),
+                timestamp: message.timestamp,
+                messageId: message.messageId ? message.messageId.toString() : undefined,
+                sender: message.sender.toString(),
+                messageText: message.content || '',
+                image: message.imageUrl || null,
+                status: message.status || 'Sent',
+              }));
+            }
+    
+            const lastMessage = recentMessages[recentMessages.length - 1];
+    
+            return {
+              chatId: chat.chatId,
+              profilePicture: otherUser?.picture || '',
+              fullName: otherUser
+                ? `${otherUser.firstName} ${otherUser.lastName}`
+                : '',
+              lastMessageText: lastMessage?.messageText || '',
+              lastMessageDate: lastMessage?.timestamp
+                ? formatLastMessageDate(new Date(lastMessage.timestamp))
+                : '',
+              isLastMessageSenderIsTheUser:
+                lastMessage?.sender.toString() === userObjectId.toString(),
+              lastMessageStatus: lastMessage?.status || '',
+              recieverId: otherParticipantIds.toString(),
+              isPinned: false,
+              messagesDidntReadAmount: unreadMessagesCount,
+              recentMessages: recentMessages, // Send the formatted messages to frontend
+            };
+          })
+        );
+    
+        // Emit the response to the socket
+        socket.emit('chatsPaginationResponse', {
           success: true,
-          data: [],
+          data: resultChats,
           pagination: {
-            isMore: false,
+            isMore: resultChats.length === limit,
             page: pageNumber,
-            totalPages: 0,
-            totalChats: 0,
+            totalPages: Math.ceil(chats.length / limit),
+            totalChats: chats.length,
           },
         });
+      } catch (error) {
+        console.error('Error in getChatsPagination:', error);
+        socket.emit('chatsPaginationResponse', { success: false });
       }
-
-      // Map chat details
-      const resultChats = await Promise.all(
-        chats.map(async (chat) => {
-          const otherParticipantIds = chat.participants.filter(
-            (id: mongoose.Types.ObjectId) => id.toString() !== userObjectId.toString()
-          );
-
-          const otherUser = await usersCollection.findOne(
-            { _id: { $in: otherParticipantIds } },
-            { projection: { picture: 1, firstName: 1, lastName: 1 } }
-          );
-
-          const allMessages = await messagesCollection.findOne(
-            { chatId: chat._id },
-            { projection: { messages: 1 } }
-          );
-
-          let unreadMessagesCount = 0;
-          let recentMessages = [];
-
-          if (allMessages?.messages) {
-            recentMessages = allMessages.messages.slice(-20).reverse();
-
-            for (const message of recentMessages) {
-              if (
-                message.sender.toString() !== userObjectId.toString() &&
-                message.status !== 'Read'
-              ) {
-                unreadMessagesCount++;
-              } else {
-                break;
-              }
-            }
-
-            recentMessages = recentMessages.reverse();
-          }
-
-          const lastMessage = recentMessages[recentMessages.length - 1];
-
-          return {
-            chatId: chat.chatId,
-            profilePicture: otherUser?.picture || '',
-            fullName: otherUser
-              ? `${otherUser.firstName} ${otherUser.lastName}`
-              : '',
-            lastMessageText: lastMessage?.content || '',
-            lastMessageDate: lastMessage?.timestamp
-              ? formatLastMessageDate(new Date(lastMessage.timestamp))
-              : '',
-            isLastMessageSenderIsTheUser:
-              lastMessage?.sender.toString() === userObjectId.toString(),
-            lastMessageStatus: lastMessage?.status || '',
-            recieverId: otherParticipantIds.toString(),
-            isPinned: false, // Modify if pinning feature is present
-            messagesDidntReadAmount: unreadMessagesCount,
-            recentMessages: recentMessages,
-          };
-        })
-      );
-
-      console.log('Resulted chats', resultChats);
-
-      // Emit the response to the socket
-      socket.emit('chatsPaginationResponse', {
-        success: true,
-        data: resultChats,
-        pagination: {
-          isMore: resultChats.length === limit,
-          page: pageNumber,
-          totalPages: Math.ceil(chats.length / limit),
-          totalChats: chats.length,
-        },
-      });
-    } catch (error) {
-      console.error('Error in getChatsPagination:', error);
-      socket.emit('chatsPaginationResponse', { success: false });
-    }
-  });
+    });
+    
 
 
 
