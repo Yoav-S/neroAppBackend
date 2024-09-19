@@ -82,7 +82,6 @@ export const socketHandler = (io: Server) => {
             const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
             
             // Reverse the order to match the getChatMessages direction
-            recentMessages.reverse();
     
             let unreadMessagesCount = 0;
             for (const message of recentMessages) {
@@ -96,7 +95,7 @@ export const socketHandler = (io: Server) => {
               }
             }
     
-            const lastMessage = recentMessages[0];
+            const lastMessage = recentMessages[recentMessages.length - 1];
     
             return {
               chatId: chat.chatId,
