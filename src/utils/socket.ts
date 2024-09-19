@@ -206,13 +206,14 @@ export const socketHandler = (io: Server) => {
     });
 
     // Handle sending a message
-    socket.on('sendMessage', async (formData: any) => {
+    socket.on('sendMessage', async (data: any) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        const {chatId, sender, messageText, images} = formData;
     
-        console.log('Received data:', { chatId, sender, messageText, imageCount: images.length });
+        const { chatId, sender, messageText, imagesUrl } = data;
+    
+        console.log('Received data:', { chatId, sender, messageText, imageCount: imagesUrl?.length });
     
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
@@ -227,7 +228,7 @@ export const socketHandler = (io: Server) => {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+            imageUrl: imagesUrl && imagesUrl.length > 0 ? await uploadImage(chatId, imagesUrl[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -238,19 +239,21 @@ export const socketHandler = (io: Server) => {
         }
     
         // Handle image messages
-        for (let i = 0; i < images.length; i++) {
-          const imageMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: '',
-            imageUrl: await uploadImage(chatId, images[i]),
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
-          newMessages.push(imageMessage);
+        if (imagesUrl && imagesUrl.length > 0) {
+          for (let i = 0; i < imagesUrl.length; i++) {
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              content: '',
+              imageUrl: await uploadImage(chatId, imagesUrl[i]),
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+              reactions: [],
+              attachments: [],
+            };
+            newMessages.push(imageMessage);
+          }
         }
     
         const result = await messagesCollection.updateOne(
