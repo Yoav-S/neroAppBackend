@@ -332,7 +332,6 @@ export const getCategories = async (req: Request, res: Response) => {
       .limit(limit)
       .toArray(); // Convert cursor to array
     
-    console.log(categories);
 
     // Get the total number of documents in the collection
     const totalCategories = await categoriesCollection.countDocuments();

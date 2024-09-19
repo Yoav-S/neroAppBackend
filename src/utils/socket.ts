@@ -207,6 +207,8 @@ export const socketHandler = (io: Server) => {
 
     // Handle sending a message
     socket.on('sendMessage', async (payload) => {
+      console.log(payload);
+      
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
