@@ -59,37 +59,41 @@ export const socketHandler = (io: Server) => {
               { projection: { picture: 1, firstName: 1, lastName: 1 } }
             );
     
-            // Use a pipeline to fetch and format the recent messages
-            const pipeline = [
-              { $match: { chatId: chat._id } },
-              { $project: { messages: { $slice: [{ $reverseArray: '$messages' }, 0, 20] } } },
-              { $unwind: '$messages' },
-              { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
-              {
-                $project: {
-                  messageId: '$messages.messageId',
-                  sender: { $arrayElemAt: ['$senderInfo._id', 0] },
-                  messageText: '$messages.content',
-                  formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
-                  status: '$messages.status',
-                  image: '$messages.imageUrl',
-                  timestamp: '$messages.timestamp',
-                },
-              },
-            ];
-    
-            const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
+            // Fetch messages for the current chat
+            const allMessages = await messagesCollection.findOne(
+              { chatId: chat._id },
+              { projection: { messages: 1 } }
+            );
     
             let unreadMessagesCount = 0;
-            for (const message of recentMessages.reverse()) {
-              if (
-                message.sender.toString() !== userObjectId.toString() &&
-                message.status !== 'Read'
-              ) {
-                unreadMessagesCount++;
-              } else {
-                break;
+            let recentMessages = [];
+    
+            if (allMessages?.messages) {
+              // Slice and reverse the last 20 messages
+              recentMessages = allMessages.messages.slice(-20).reverse();
+    
+              // Calculate unread messages count
+              for (const message of recentMessages) {
+                if (
+                  message.sender.toString() !== userObjectId.toString() &&
+                  message.status !== 'Read'
+                ) {
+                  unreadMessagesCount++;
+                } else {
+                  break;
+                }
               }
+    
+              // Map messages to the expected format
+              recentMessages = recentMessages.map((message: MessageType) => ({
+                formattedTime: new Date(message.timestamp).toLocaleTimeString(),
+                timestamp: message.timestamp,
+                messageId: message.messageId ? message.messageId.toString() : undefined,
+                sender: message.sender.toString(),
+                messageText: message.content || '',
+                image: message.imageUrl || null,
+                status: message.status || 'Sent',
+              }));
             }
     
             const lastMessage = recentMessages[recentMessages.length - 1];
@@ -108,7 +112,7 @@ export const socketHandler = (io: Server) => {
               recieverId: otherParticipantIds.toString(),
               isPinned: false,
               messagesDidntReadAmount: unreadMessagesCount,
-              recentMessages, // Send the formatted messages to frontend
+              recentMessages: recentMessages, // Send the formatted messages to frontend
             };
           })
         );
@@ -125,9 +129,12 @@ export const socketHandler = (io: Server) => {
           },
         });
       } catch (error) {
+        console.error('Error in getChatsPagination:', error);
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
+    
     
     
 
