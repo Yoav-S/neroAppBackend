@@ -208,6 +208,8 @@ export const socketHandler = (io: Server) => {
     // Handle sending a message
     socket.on('sendMessage', async (data: any) => {
       try {
+        console.log('Received raw data:', JSON.stringify(data, null, 2));
+
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
