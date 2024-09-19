@@ -96,7 +96,7 @@ export const socketHandler = (io: Server) => {
               }
             }
     
-            const lastMessage = recentMessages[recentMessages.length - 1];
+            const lastMessage = recentMessages[0];
     
             return {
               chatId: chat.chatId,
