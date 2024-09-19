@@ -206,28 +206,25 @@ export const socketHandler = (io: Server) => {
     });
 
     // Handle sending a message
-    socket.on('sendMessage', async (formData) => {
+    socket.on('sendMessage', async (payload) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        const messageText = formData.json('messageText');
-        const sender = formData.json('sender');
-        const chatId = formData.json('chatId');
-        const images = formData.json('imagesUrl');
+        const { messageText, sender, chatId, images } = payload;
     
-        console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
-    
-        console.log('Received data:', { chatId, sender, messageText, imageCount: images.length });
+        if (!sender || !chatId) {
+          return socket.emit('error', { message: 'Invalid data' });
+        }
     
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
-        const newMessages: any[] = [];
+        const newMessages = [];
     
-        // Handle text message (if any)
+        // Handle text message
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
@@ -243,14 +240,14 @@ export const socketHandler = (io: Server) => {
           newMessages.push(textMessage);
         }
     
-        // Handle image messages
+        // Handle images
         if (images && images.length > 0) {
           for (let i = 0; i < images.length; i++) {
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, images[i]),
+              imageUrl: await uploadImage(chatId, images[i]), // You can handle base64 decoding here
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -286,6 +283,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
