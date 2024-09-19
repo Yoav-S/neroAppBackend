@@ -81,6 +81,7 @@ export const socketHandler = (io: Server) => {
     
             const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
     
+            // Calculate unread messages count
             let unreadMessagesCount = 0;
             for (const message of recentMessages) {
               if (
