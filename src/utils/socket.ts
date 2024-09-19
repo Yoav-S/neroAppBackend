@@ -5,7 +5,11 @@ import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
+    socket.on('joinRoom', (chatId: string) => {
+      socket.join(chatId);  // Joins the chat room with the chatId
+    });
     
+
     // Handle fetching chat messages
   socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
     try {
