@@ -206,34 +206,43 @@ export const socketHandler = (io: Server) => {
     });
 
     // Handle sending a message
-    socket.on('sendMessage', async ({ chatId, sender, messageText, images }: any) => {
+    socket.on('sendMessage', async (formData: any) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        console.log(chatId, sender, messageText, images);
-        
+    
+        const chatId = formData.get('chatId');
+        const sender = formData.get('sender');
+        const messageText = formData.get('messageText');
+        const images = formData.getAll('imagesUrl');
+    
+        console.log('Received data:', { chatId, sender, messageText, imageCount: images.length });
+    
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
-
+    
         const newMessages: any[] = [];
-
-        const firstMessage = {
-          messageId: new mongoose.Types.ObjectId(),
-          sender: mongoose.Types.ObjectId.createFromHexString(sender),
-          content: messageText,
-          imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
-          timestamp: new Date(),
-          status: 'Delivered',
-          isEdited: false,
-          reactions: [],
-          attachments: [],
-        };
-
-        newMessages.push(firstMessage);
-
-        for (let i = 1; i < images.length; i++) {
+    
+        // Handle text message (if any)
+        if (messageText) {
+          const textMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: messageText,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(textMessage);
+        }
+    
+        // Handle image messages
+        for (let i = 0; i < images.length; i++) {
           const imageMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
@@ -247,16 +256,16 @@ export const socketHandler = (io: Server) => {
           };
           newMessages.push(imageMessage);
         }
-
+    
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
           { push: { messages: { $each: newMessages } } }
         );
-
+    
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-
+    
         const formattedMessages = newMessages.map((msg) => ({
           formattedTime: formatLastMessageDate(msg.timestamp),
           messageId: msg.messageId.toString(),
@@ -265,9 +274,8 @@ export const socketHandler = (io: Server) => {
           image: msg.imageUrl,
           status: msg.status,
         }));
-
+    
         io.to(chatId).emit('newMessage', formattedMessages);
-
         socket.emit('messageSent', { success: true, messages: formattedMessages });
       } catch (error) {
         console.error('Error sending message:', error);
