@@ -211,7 +211,7 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        const {messageText, sender, chatId, images} = formData.parts[0]
+        const {messageText, sender, chatId, images} = formData._parts[0]
 
         console.log('formData:', formData);
 
