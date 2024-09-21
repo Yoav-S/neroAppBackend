@@ -313,7 +313,6 @@ export const createPost = async (req: Request, res: Response) => {
 };
 
 export const getCategories = async (req: Request, res: Response) => {
-  console.log('arrived get categories');
   
   try {
     const db = getDatabase();
