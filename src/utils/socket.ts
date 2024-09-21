@@ -215,11 +215,10 @@ export const socketHandler = (io: Server) => {
         const sender = formData.get('sender');
         const chatId = formData.get('chatId');
         const images = formData.getAll('imagesUrl');
-    
+        console.log('formData:', formData);
+
         console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
-    
-        console.log('Received data:', { chatId, sender, messageText, imageCount: images.length });
-    
+        
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
