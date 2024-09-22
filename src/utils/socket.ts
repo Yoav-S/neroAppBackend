@@ -211,31 +211,39 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        const {messageText, sender, chatId, images} = formData._parts[0]
-
-        console.log('formData:', formData);
-        console.log('formData._parts:', formData._parts);
-        
+        // Initialize variables
+        let messageText, sender, chatId, images = [];
+    
+        // Loop through formData._parts to extract values
+        for (const part of formData._parts) {
+          if (part[0] === 'messageText') {
+            messageText = part[1];
+          } else if (part[0] === 'sender') {
+            sender = part[1];
+          } else if (part[0] === 'chatId') {
+            chatId = part[1];
+          } else if (part[0] === 'imagesUrl') {
+            images.push(part[1]); // Collect images
+          }
+        }
+    
         console.log('Received data:', { messageText, sender, chatId });
-        console.log(formData._parts[0].get('messageText'));
-        console.log(formData._parts[0].get('sender'));
-        console.log(formData._parts[0].get('chatId'));
-        console.log(formData._parts[0].get('imagesUrl'));
-
+        console.log('Images:', images);
+    
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
-        const newMessages: any[] = [];
+        const newMessages = [];
     
-        // Handle text message (if any)מ
+        // Handle text message (if any)
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images && images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -246,21 +254,19 @@ export const socketHandler = (io: Server) => {
         }
     
         // Handle image messages
-        if (images && images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const imageMessage = {
-              messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: '',
-              imageUrl: await uploadImage(chatId, images[i]),
-              timestamp: new Date(),
-              status: 'Delivered',
-              isEdited: false,
-              reactions: [],
-              attachments: [],
-            };
-            newMessages.push(imageMessage);
-          }
+        for (const image of images) {
+          const imageMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: '',
+            imageUrl: await uploadImage(chatId, image),
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(imageMessage);
         }
     
         const result = await messagesCollection.updateOne(
@@ -288,6 +294,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
