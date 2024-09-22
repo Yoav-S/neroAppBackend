@@ -211,39 +211,39 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        // Initialize variables
-        let messageText, sender, chatId, images = [];
+        let messageText: string = '';
+        let sender: string = '';
+        let chatId: string = '';
+        let images: any[] = [];
     
-        // Loop through formData._parts to extract values
-        for (const part of formData._parts) {
-          if (part[0] === 'messageText') {
-            messageText = part[1];
-          } else if (part[0] === 'sender') {
-            sender = part[1];
-          } else if (part[0] === 'chatId') {
-            chatId = part[1];
-          } else if (part[0] === 'imagesUrl') {
-            images.push(part[1]); // Collect images
+        formData._parts.forEach(([key, value]: [string, any]) => {  // Add explicit types here
+          if (key === 'messageText') {
+            messageText = value;
+          } else if (key === 'sender') {
+            sender = value;
+          } else if (key === 'chatId') {
+            chatId = value;
+          } else if (key === 'imagesUrl') {
+            images.push(value);
           }
-        }
+        });
     
-        console.log('Received data:', { messageText, sender, chatId });
-        console.log('Images:', images);
-    
+        console.log('Received data:', { messageText, sender, chatId, images });
+        
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
-        const newMessages = [];
+        const newMessages: any[] = [];
     
-        // Handle text message (if any)
+        // Handle text message (if any)מ
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+            imageUrl: images && images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -254,19 +254,21 @@ export const socketHandler = (io: Server) => {
         }
     
         // Handle image messages
-        for (const image of images) {
-          const imageMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: '',
-            imageUrl: await uploadImage(chatId, image),
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
-          newMessages.push(imageMessage);
+        if (images && images.length > 0) {
+          for (let i = 0; i < images.length; i++) {
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              content: '',
+              imageUrl: await uploadImage(chatId, images[i]),
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+              reactions: [],
+              attachments: [],
+            };
+            newMessages.push(imageMessage);
+          }
         }
     
         const result = await messagesCollection.updateOne(
@@ -294,7 +296,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
