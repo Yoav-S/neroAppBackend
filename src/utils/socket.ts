@@ -279,8 +279,8 @@ export const socketHandler = (io: Server) => {
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-          { push: { messages: { $each: newMessages } } }
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the document with the correct chatId
+          { push: { messages: newMessages } } // Use $push to append to the messages array
         );
     
         if (result.modifiedCount === 0) {
