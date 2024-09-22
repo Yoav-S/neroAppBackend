@@ -3,7 +3,8 @@ import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
-import { MessageType } from './interfaces';
+import { resolveUriToBuffer } from '../controllers/chatController';
+import { CustomFile } from './interfaces';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -133,13 +134,6 @@ export const socketHandler = (io: Server) => {
       }
     });
     
-    
-    
-    
-
-
-
-    // Handle sending a message
     socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
       try {
         const pageSize = 20;
@@ -205,18 +199,17 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-    // Handle sending a message
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        let messageText: string = '';
-        let sender: string = '';
-        let chatId: string = '';
+        let messageText = '';
+        let sender = '';
+        let chatId = '';
         let images: any[] = [];
     
-        formData._parts.forEach(([key, value]: [string, any]) => {  // Add explicit types here
+        formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
             messageText = value;
           } else if (key === 'sender') {
@@ -229,7 +222,7 @@ export const socketHandler = (io: Server) => {
         });
     
         console.log('Received data:', { messageText, sender, chatId, images });
-        
+    
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
@@ -237,13 +230,13 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message (if any)מ
+        // Handle text message
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images && images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -254,13 +247,23 @@ export const socketHandler = (io: Server) => {
         }
     
         // Handle image messages
-        if (images && images.length > 0) {
+        if (images.length > 0) {
           for (let i = 0; i < images.length; i++) {
+            const image = images[i];
+    
+            // Convert the URI to a buffer and set up the file data for upload
+            const imageBuffer = await resolveUriToBuffer(image.uri);
+            const customFile: CustomFile = {
+              originalname: image.name,
+              mimetype: image.type,
+              buffer: imageBuffer,
+            };
+    
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, images[i]),
+              imageUrl: await uploadImage(chatId, customFile), // Pass the custom file object
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,

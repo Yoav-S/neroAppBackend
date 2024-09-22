@@ -1,5 +1,5 @@
 import { bucket } from '../config/firebaseConfig';
-
+import { CustomFile } from '../utils/interfaces';
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
@@ -37,8 +37,20 @@ const formatTime = (date: Date): string => {
 };
 
 
-export async function uploadImage(chatId: string, image: Express.Multer.File): Promise<string> {
-  // Include 'Chats/' at the beginning of the uniqueFilename
+
+    
+export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
+  const response = await fetch(uri);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from URI: ${uri}`);
+  }
+
+  // Return the buffer
+  return Buffer.from(await response.arrayBuffer());
+}
+
+export async function uploadImage(chatId: string, image: CustomFile): Promise<string> {
   const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
   const file = bucket.file(uniqueFilename);
   
@@ -49,6 +61,5 @@ export async function uploadImage(chatId: string, image: Express.Multer.File): P
     public: true,
   });
 
-  // The URL should now include 'Chats/' in the path
   return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
 }

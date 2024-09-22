@@ -1,5 +1,9 @@
 import { ObjectId } from 'mongodb'; // Ensure this import is at the top of your file
-
+export interface CustomFile {
+  originalname: string;
+  mimetype: string;
+  buffer: Buffer;
+}
 export interface Filters {
     location?: {
       city: string;
