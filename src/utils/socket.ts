@@ -215,9 +215,13 @@ export const socketHandler = (io: Server) => {
 
         console.log('formData:', formData);
         console.log('formData._parts:', formData._parts);
-
-        console.log('Received data:', { messageText, sender, chatId });
         
+        console.log('Received data:', { messageText, sender, chatId });
+        console.log(formData._parts[0].get('messageText'));
+        console.log(formData._parts[0].get('sender'));
+        console.log(formData._parts[0].get('chatId'));
+        console.log(formData._parts[0].get('imagesUrl'));
+
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
