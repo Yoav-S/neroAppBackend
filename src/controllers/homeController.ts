@@ -14,11 +14,9 @@ export const getPostsPagination = async (req: Request, res: Response) => {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
     const categoriesCollection = db.collection('categories');
-    console.log(req.body);
 
     // Destructure and provide default values
     const { pageNumber = 0, filters = null } = req.body;
-    console.log(filters);
 
     const page = parseInt(pageNumber as string, 10) || 0;
     const limit = 5;
@@ -61,7 +59,6 @@ export const getPostsPagination = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error retrieving posts:', error);
     res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
   }
 };
@@ -353,7 +350,6 @@ export const getCategories = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
     if (error instanceof AppError) {
       res.status(400).json({ success: false, message: error.userMessage });
     } else {

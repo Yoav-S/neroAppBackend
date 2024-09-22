@@ -214,7 +214,8 @@ export const socketHandler = (io: Server) => {
         const {messageText, sender, chatId, images} = formData._parts[0]
 
         console.log('formData:', formData);
-
+        console.log('formData._parts:', formData._parts);
+        
         console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
         
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
