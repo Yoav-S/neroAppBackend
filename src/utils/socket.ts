@@ -215,7 +215,11 @@ export const socketHandler = (io: Server) => {
 
         console.log('formData:', formData);
         console.log('formData._parts:', formData._parts);
-        
+        console.log('formData._parts.get(messageText):', formData._parts.get('messageText'));
+        console.log('formData._parts.get(sender):', formData._parts.get('sender'));
+        console.log('formData._parts.get(chatId):', formData._parts.get('chatId'));
+        console.log('formData._parts.get(imagesUrl):', formData._parts.get('imagesUrl'));
+
         console.log('Received data:', { messageText, sender, chatId, imageCount: images.length });
         
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
@@ -225,7 +229,7 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message (if any)
+        // Handle text message (if any)מ
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
