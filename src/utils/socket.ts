@@ -251,19 +251,30 @@ export const socketHandler = (io: Server) => {
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
     
-            // Convert the URI to a buffer and set up the file data for upload
-            const imageBuffer = await resolveUriToBuffer(image.uri);
+            // Convert the URI to a buffer and handle errors
+            let imageBuffer;
+            try {
+              imageBuffer = await resolveUriToBuffer(image.uri);
+            } catch (error) {
+              console.error('Error fetching image buffer:', error);
+              return socket.emit('error', { message: 'Error processing image' });
+            }
+    
+            // Set up the custom file object for upload
             const customFile: CustomFile = {
               originalname: image.name,
               mimetype: image.type,
               buffer: imageBuffer,
             };
     
+            // Upload the image and create the image message
+            const imageUrl = await uploadImage(chatId, customFile);
+    
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, customFile), // Pass the custom file object
+              imageUrl, // The image URL returned from the upload
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -299,6 +310,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);

@@ -40,14 +40,15 @@ const formatTime = (date: Date): string => {
     
 export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
   const response = await fetch(uri);
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch image from URI: ${uri}`);
   }
 
-  // Return the buffer
-  return Buffer.from(await response.arrayBuffer());
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
+
 
 export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
   const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
