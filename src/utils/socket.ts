@@ -203,12 +203,13 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+        
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+        
+        // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
             messageText = value;
@@ -216,13 +217,14 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'imagesUrl') {
-            images.push(value);
+          } else if (key === 'images') {
+            images.push(value); // Here we're capturing image objects
           }
         });
     
         console.log('Received data:', { messageText, sender, chatId, images });
     
+        // Check if the chat exists
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
@@ -246,35 +248,25 @@ export const socketHandler = (io: Server) => {
           newMessages.push(textMessage);
         }
     
-        // Handle image messages
+        // Handle image uploads
         if (images.length > 0) {
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
     
-            // Convert the URI to a buffer and handle errors
-            let imageBuffer;
-            try {
-              imageBuffer = await resolveUriToBuffer(image.uri);
-            } catch (error) {
-              console.error('Error fetching image buffer:', error);
-              return socket.emit('error', { message: 'Error processing image' });
-            }
-    
-            // Set up the custom file object for upload
-            const customFile: CustomFile = {
+            // Convert URI to buffer
+            const imageBuffer = await resolveUriToBuffer(image.uri);
+            const customFile = {
               originalname: image.name,
               mimetype: image.type,
               buffer: imageBuffer,
             };
     
-            // Upload the image and create the image message
-            const imageUrl = await uploadImage(chatId, customFile);
-    
+            // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl, // The image URL returned from the upload
+              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -285,6 +277,7 @@ export const socketHandler = (io: Server) => {
           }
         }
     
+        // Save the messages
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
           { push: { messages: { $each: newMessages } } }
@@ -294,8 +287,9 @@ export const socketHandler = (io: Server) => {
           throw new Error('Failed to send message');
         }
     
+        // Emit success to client
         const formattedMessages = newMessages.map((msg) => ({
-          formattedTime: formatLastMessageDate(msg.timestamp),
+          formattedTime: msg.timestamp,
           messageId: msg.messageId.toString(),
           sender: msg.sender.toString(),
           messageText: msg.content,
