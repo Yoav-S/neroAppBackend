@@ -37,7 +37,6 @@ const formatTime = (date: Date): string => {
 };
 
 
-
     
 export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
   const response = await fetch(uri);
@@ -50,15 +49,20 @@ export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export async function uploadImage(chatId: string, image: CustomFile): Promise<string> {
+export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
   const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
   const file = bucket.file(uniqueFilename);
   
+  // Ensure that buffer is properly populated
+  if (!image.buffer) {
+    throw new Error('Image buffer is missing');
+  }
+
   await file.save(image.buffer, {
     metadata: {
       contentType: image.mimetype,
     },
-    public: true,
+    public: true, // Ensure the file is publicly accessible
   });
 
   return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
