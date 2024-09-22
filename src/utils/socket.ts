@@ -218,7 +218,7 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'images') {
-            images.push(value); // Here we're capturing image objects
+            images.push(value); // Capture image objects
           }
         });
     
@@ -252,7 +252,7 @@ export const socketHandler = (io: Server) => {
         if (images.length > 0) {
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
-    
+            
             // Convert URI to buffer
             const imageBuffer = await resolveUriToBuffer(image.uri);
             const customFile = {
@@ -260,7 +260,7 @@ export const socketHandler = (io: Server) => {
               mimetype: image.type,
               buffer: imageBuffer,
             };
-    
+            
             // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
@@ -280,7 +280,7 @@ export const socketHandler = (io: Server) => {
         // Save the messages
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the document with the correct chatId
-          { push: { messages: newMessages } } // Use $push to append to the messages array
+          { push: { messages: { $each: newMessages } } } // Push new messages to the messages array
         );
     
         if (result.modifiedCount === 0) {
@@ -304,6 +304,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
 
     socket.on('disconnect', () => {
