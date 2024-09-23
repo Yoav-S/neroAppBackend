@@ -279,9 +279,12 @@ export const socketHandler = (io: Server) => {
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the document with the correct chatId
-          { push: { messages: { $each: newMessages } } } // Push new messages to the messages array
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
+          { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
+        
+        
+        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
