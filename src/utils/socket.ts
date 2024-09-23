@@ -203,12 +203,12 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+        
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+        
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -217,12 +217,12 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'imagesUrl') {
+          } else if (key === 'images') {
             images.push(value); // Capture image objects
           }
         });
     
-        console.log('Received data:', { messageText, sender, chatId, images: images.length });
+        console.log('Received data:', { messageText, sender, chatId, images });
     
         // Check if the chat exists
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
@@ -234,62 +234,53 @@ export const socketHandler = (io: Server) => {
     
         // Handle text message
         if (messageText) {
-          const textMessage: any = {
+          const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
             reactions: [],
             attachments: [],
           };
-    
-          if (images.length > 0) {
-            const image = images[0];
-            textMessage.imageUrl = await uploadImage(chatId, {
-              originalname: image.name,
-              mimetype: image.type,
-              buffer: Buffer.from(image.base64, 'base64')
-            });
-          }
-    
           newMessages.push(textMessage);
         }
     
         // Handle image uploads
         if (images.length > 0) {
-          for (let i = messageText ? 1 : 0; i < images.length; i++) {
+          for (let i = 0; i < images.length; i++) {
             const image = images[i];
-            try {
-              const imageUrl = await uploadImage(chatId, {
-                originalname: image.name,
-                mimetype: image.type,
-                buffer: Buffer.from(image.base64, 'base64')
-              });
-              const imageMessage: any = {
-                messageId: new mongoose.Types.ObjectId(),
-                sender: mongoose.Types.ObjectId.createFromHexString(sender),
-                content: '',
-                imageUrl: imageUrl,
-                timestamp: new Date(),
-                status: 'Delivered',
-                isEdited: false,
-                reactions: [],
-                attachments: [],
-              };
-              newMessages.push(imageMessage);
-            } catch (error) {
-              console.error('Error processing image:', error);
-              socket.emit('error', { message: `Error processing image: ${image.name}` });
-            }
+            
+            // Convert URI to buffer
+            const imageBuffer = await resolveUriToBuffer(image.uri);
+            const customFile = {
+              originalname: image.name,
+              mimetype: image.type,
+              buffer: imageBuffer,
+            };
+            
+            // Upload image and create message
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              content: '',
+              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+              reactions: [],
+              attachments: [],
+            };
+            newMessages.push(imageMessage);
           }
         }
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-          { push: { messages: { $each: newMessages } } }
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the document with the correct chatId
+          { push: { messages: { $each: newMessages } } } // Push new messages to the messages array
         );
     
         if (result.modifiedCount === 0) {
