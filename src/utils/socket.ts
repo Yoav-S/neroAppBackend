@@ -203,12 +203,12 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-        
+    
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -234,48 +234,62 @@ export const socketHandler = (io: Server) => {
     
         // Handle text message
         if (messageText) {
-          const textMessage = {
+          const textMessage: any = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
             reactions: [],
             attachments: [],
           };
+    
+          if (images.length > 0) {
+            const image = images[0];
+            textMessage.imageUrl = await uploadImage(chatId, {
+              originalname: image.name,
+              mimetype: image.type,
+              buffer: await getImageBuffer(image.uri)
+            });
+          }
+    
           newMessages.push(textMessage);
         }
     
         // Handle image uploads
         if (images.length > 0) {
-          for (let i = 1; i < images.length; i++) {
+          for (let i = messageText ? 1 : 0; i < images.length; i++) {
             const image = images[i];
-            
-            // Convert URI to buffer
-
-            
-            // Upload image and create message
-            const imageMessage = {
-              messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: '',
-              imageUrl: await uploadImage(chatId, image), // Uploading the image
-              timestamp: new Date(),
-              status: 'Delivered',
-              isEdited: false,
-              reactions: [],
-              attachments: [],
-            };
-            newMessages.push(imageMessage);
+            try {
+              const imageUrl = await uploadImage(chatId, {
+                originalname: image.name,
+                mimetype: image.type,
+                buffer: await getImageBuffer(image.uri)
+              });
+              const imageMessage: any = {
+                messageId: new mongoose.Types.ObjectId(),
+                sender: mongoose.Types.ObjectId.createFromHexString(sender),
+                content: '',
+                imageUrl: imageUrl,
+                timestamp: new Date(),
+                status: 'Delivered',
+                isEdited: false,
+                reactions: [],
+                attachments: [],
+              };
+              newMessages.push(imageMessage);
+            } catch (error) {
+              console.error('Error processing image:', error);
+              socket.emit('error', { message: `Error processing image: ${image.name}` });
+            }
           }
         }
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the document with the correct chatId
-          { push: { messages: { $each: newMessages } } } // Push new messages to the messages array
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { push: { messages: { $each: newMessages } } }
         );
     
         if (result.modifiedCount === 0) {
@@ -299,6 +313,15 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
+    // Helper function to get image buffer from URI
+    async function getImageBuffer(uri: string): Promise<Buffer> {
+      const response = await fetch(uri);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+      return Buffer.from(await response.arrayBuffer());
+    }
     
     
 
