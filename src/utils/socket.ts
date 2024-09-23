@@ -222,7 +222,7 @@ export const socketHandler = (io: Server) => {
           }
         });
     
-        console.log('Received data:', { messageText, sender, chatId, images });
+        console.log('Received data:', { messageText, sender, chatId, images: images.length });
     
         // Check if the chat exists
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
@@ -250,7 +250,7 @@ export const socketHandler = (io: Server) => {
             textMessage.imageUrl = await uploadImage(chatId, {
               originalname: image.name,
               mimetype: image.type,
-              buffer: await getImageBuffer(image.uri)
+              buffer: Buffer.from(image.base64, 'base64')
             });
           }
     
@@ -265,7 +265,7 @@ export const socketHandler = (io: Server) => {
               const imageUrl = await uploadImage(chatId, {
                 originalname: image.name,
                 mimetype: image.type,
-                buffer: await getImageBuffer(image.uri)
+                buffer: Buffer.from(image.base64, 'base64')
               });
               const imageMessage: any = {
                 messageId: new mongoose.Types.ObjectId(),
@@ -313,15 +313,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
-    // Helper function to get image buffer from URI
-    async function getImageBuffer(uri: string): Promise<Buffer> {
-      const response = await fetch(uri);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText}`);
-      }
-      return Buffer.from(await response.arrayBuffer());
-    }
     
     
 
