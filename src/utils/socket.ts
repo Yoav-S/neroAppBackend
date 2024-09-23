@@ -250,23 +250,18 @@ export const socketHandler = (io: Server) => {
     
         // Handle image uploads
         if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
+          for (let i = 1; i < images.length; i++) {
             const image = images[i];
             
             // Convert URI to buffer
-            const imageBuffer = await resolveUriToBuffer(image.uri);
-            const customFile = {
-              originalname: image.name,
-              mimetype: image.type,
-              buffer: imageBuffer,
-            };
+
             
             // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
+              imageUrl: await uploadImage(chatId, image), // Uploading the image
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
