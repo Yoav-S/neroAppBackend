@@ -218,12 +218,20 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'images') {
-            images.push(value); // Capture image objects
+            if (value.uri) {
+              images.push(value); // Ensure valid image data
+            } else {
+              console.warn('Invalid image data:', value);
+            }
           }
         });
     
-        console.log('Received data:', { messageText, sender, chatId, images });
+        if (!sender || !chatId) {
+          throw new Error('Sender or chatId missing');
+        }
     
+        console.log('Received data:', { messageText, sender, chatId, images });
+        
         // Check if the chat exists
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
@@ -253,39 +261,41 @@ export const socketHandler = (io: Server) => {
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
             
-            // Convert URI to buffer
-            const imageBuffer = await resolveUriToBuffer(image.uri);
-            const customFile = {
-              originalname: image.name,
-              mimetype: image.type,
-              buffer: imageBuffer,
-            };
-            
-            // Upload image and create message
-            const imageMessage = {
-              messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: '',
-              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
-              timestamp: new Date(),
-              status: 'Delivered',
-              isEdited: false,
-              reactions: [],
-              attachments: [],
-            };
-            newMessages.push(imageMessage);
+            try {
+              // Convert URI to buffer
+              const imageBuffer = await resolveUriToBuffer(image.uri);
+              const customFile = {
+                originalname: image.name,
+                mimetype: image.type,
+                buffer: imageBuffer,
+              };
+              
+              // Upload image and create message
+              const imageMessage = {
+                messageId: new mongoose.Types.ObjectId(),
+                sender: mongoose.Types.ObjectId.createFromHexString(sender),
+                content: '',
+                imageUrl: await uploadImage(chatId, customFile), // Uploading the image
+                timestamp: new Date(),
+                status: 'Delivered',
+                isEdited: false,
+                reactions: [],
+                attachments: [],
+              };
+              newMessages.push(imageMessage);
+            } catch (error) {
+            }
           }
         }
     
         // Save the messages
-        const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
-          { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
-        );
+                    // Save the messages
+                    const result = await messagesCollection.updateOne(
+                      { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+                      { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
+                    );
+
         
-        
-        
-    
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
@@ -307,6 +317,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
 

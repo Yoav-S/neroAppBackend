@@ -39,15 +39,19 @@ const formatTime = (date: Date): string => {
 
     
 export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
-  const response = await fetch(uri);
+  try {
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image from URI: ${uri}`);
+    }
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image from URI: ${uri}`);
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch (error) {
+    throw error;
   }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
 }
+
 
 
 export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
@@ -55,16 +59,21 @@ export async function uploadImage(chatId: string, image: { originalname: string,
   const file = bucket.file(uniqueFilename);
   
   // Ensure that buffer is properly populated
-  if (!image.buffer) {
-    throw new Error('Image buffer is missing');
+  if (!image.buffer || image.buffer.length === 0) {
+    throw new Error('Image buffer is missing or empty');
   }
 
-  await file.save(image.buffer, {
-    metadata: {
-      contentType: image.mimetype,
-    },
-    public: true, // Ensure the file is publicly accessible
-  });
+  try {
+    await file.save(image.buffer, {
+      metadata: {
+        contentType: image.mimetype,
+      },
+      public: true, // Ensure the file is publicly accessible
+    });
 
-  return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+    return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+  } catch (error) {
+    throw error;
+  }
 }
+
