@@ -1,7 +1,5 @@
-import mongoose from 'mongoose';
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
-import RNFetchBlob from 'rn-fetch-blob';
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
@@ -40,27 +38,22 @@ const formatTime = (date: Date): string => {
 
 
     
-export async function resolveUriToBuffer(uri: string, fileName: string, mimeType: string): Promise<{ originalname: string; mimetype: string; buffer: Buffer }> {
-  try {
-    const path = await RNFetchBlob.fs.stat(uri); // Get the file path from the URI
-    const fileBuffer = await RNFetchBlob.fs.readFile(path.path, 'base64'); // Read the file as a base64 string
+export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
+  const response = await fetch(uri);
 
-    return {
-      originalname: fileName, // Pass the original file name
-      mimetype: mimeType, // Pass the mime type
-      buffer: Buffer.from(fileBuffer, 'base64'), // Convert base64 string to Buffer
-    };
-  } catch (error) {
-    console.error('Error resolving URI to buffer:', error);
-    throw new Error('Image buffer is missing');
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from URI: ${uri}`);
   }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }
 
-// Upload image to cloud storage
+
 export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
   const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
   const file = bucket.file(uniqueFilename);
-
+  
   // Ensure that buffer is properly populated
   if (!image.buffer) {
     throw new Error('Image buffer is missing');
@@ -74,33 +67,4 @@ export async function uploadImage(chatId: string, image: { originalname: string,
   });
 
   return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-}
-export async function createTextMessage(sender: string, messageText: string, images: any[], chatId: string) {
-  const imageUrl = images.length > 0 ? await uploadImage(chatId, images[0]) : undefined; // Correctly provide both arguments
-  return {
-    messageId: new mongoose.Types.ObjectId(),
-    sender: mongoose.Types.ObjectId.createFromHexString(sender),
-    content: messageText,
-    imageUrl,
-    timestamp: new Date(),
-    status: 'Delivered',
-    isEdited: false,
-    reactions: [],
-    attachments: [],
-  };
-}
-
-// Helper function to create image messages
-
-
-// Helper function to format messages
-export function formatMessages(messages: any[]) {
-  return messages.map((msg) => ({
-    formattedTime: msg.timestamp,
-    messageId: msg.messageId.toString(),
-    sender: msg.sender.toString(),
-    messageText: msg.content,
-    image: msg.imageUrl,
-    status: msg.status,
-  }));
 }

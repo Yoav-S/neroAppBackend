@@ -5,7 +5,6 @@ import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 import { resolveUriToBuffer } from '../controllers/chatController';
 import { CustomFile } from './interfaces';
-import multer from 'multer';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -200,18 +199,16 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-
-    
-    socket.on('sendMessage', async (formData: any) => {
+    socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+        
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+        
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -220,7 +217,7 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'imagesUrl') {
+          } else if (key === 'images') {
             images.push(value); // Capture image objects
           }
         });
@@ -228,8 +225,8 @@ export const socketHandler = (io: Server) => {
         console.log('Received data:', { messageText, sender, chatId, images });
     
         // Check if the chat exists
-        const existingChat = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
-        if (!existingChat) {
+        const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
+        if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
@@ -241,7 +238,7 @@ export const socketHandler = (io: Server) => {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, await resolveUriToBuffer(images[0].uri, images[0].name, images[0].type)) : undefined,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -253,19 +250,23 @@ export const socketHandler = (io: Server) => {
     
         // Handle image uploads
         if (images.length > 0) {
-          for (const image of images) {
-            // Convert URI to buffer and get the required object
-            const imageObject = await resolveUriToBuffer(image.uri, image.name, image.type);
-            if (!imageObject.buffer) {
-              throw new Error('Image buffer is missing'); // Early exit if the buffer is missing
-            }
-    
+          for (let i = 0; i < images.length; i++) {
+            const image = images[i];
+            
+            // Convert URI to buffer
+            const imageBuffer = await resolveUriToBuffer(image.uri);
+            const customFile = {
+              originalname: image.name,
+              mimetype: image.type,
+              buffer: imageBuffer,
+            };
+            
             // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: await uploadImage(chatId, imageObject), // Uploading the image
+              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -278,9 +279,12 @@ export const socketHandler = (io: Server) => {
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
           { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
+        
+        
+        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
@@ -303,9 +307,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
-    
-    
     
     
 
