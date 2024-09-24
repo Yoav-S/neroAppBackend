@@ -217,12 +217,8 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'imagesUrl') {
-            if (value.uri) {
-              images.push(value); // Ensure valid image data
-            } else {
-              console.warn('Invalid image data:', value);
-            }
+          } else if (key === 'imagesUrl' && value.uri) {
+            images.push(value); // Ensure valid image data
           }
         });
     
@@ -240,7 +236,7 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message
+        // Handle text message with first image
         if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
@@ -254,28 +250,24 @@ export const socketHandler = (io: Server) => {
             attachments: [],
           };
           newMessages.push(textMessage);
+          images.shift(); // Remove the first image from array
         }
     
-        // Handle image uploads
+        // Handle remaining images
         if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const image = images[i];
-            
+          for (const image of images) {
             try {
-              // Convert URI to buffer
               const imageBuffer = await resolveUriToBuffer(image.uri);
               const customFile = {
                 originalname: image.name,
                 mimetype: image.type,
                 buffer: imageBuffer,
               };
-              
-              // Upload image and create message
               const imageMessage = {
                 messageId: new mongoose.Types.ObjectId(),
                 sender: mongoose.Types.ObjectId.createFromHexString(sender),
                 content: '',
-                imageUrl: await uploadImage(chatId, customFile), // Uploading the image
+                imageUrl: await uploadImage(chatId, customFile),
                 timestamp: new Date(),
                 status: 'Delivered',
                 isEdited: false,
@@ -284,18 +276,18 @@ export const socketHandler = (io: Server) => {
               };
               newMessages.push(imageMessage);
             } catch (error) {
+              console.error('Error uploading image:', error);
             }
           }
         }
     
         // Save the messages
-                    // Save the messages
-                    const result = await messagesCollection.updateOne(
-                      { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-                      { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
-                    );
-
+        const result = await messagesCollection.updateOne(
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { $push: { messages: { $each: newMessages } } } as any
+        );
         
+    
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
@@ -317,6 +309,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
