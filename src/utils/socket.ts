@@ -5,7 +5,6 @@ import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 import { resolveUriToBuffer } from '../controllers/chatController';
 import { CustomFile } from './interfaces';
-import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -200,66 +199,52 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-    
-
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+        
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: Express.Multer.File[] = [];
     
         // Extract data from formData
-        formData.forEach((value: any, key: string) => {
+        for (const [key, value] of Object.entries(formData)) {
           if (key === 'messageText') {
-            messageText = value;
+            messageText = value as string;
           } else if (key === 'sender') {
-            sender = value;
+            sender = value as string;
           } else if (key === 'chatId') {
-            chatId = value;
+            chatId = value as string;
           } else if (key === 'images') {
             if (Array.isArray(value)) {
-              images = value;
+              images = value as Express.Multer.File[];
             } else {
-              images = [value];
+              images = [value as Express.Multer.File];
             }
           }
-        });
+        }
+    
+        console.log('Received data:', { messageText, sender, chatId, images });
     
         console.log('Received data:', { messageText, sender, chatId, images });
     
         // Check if the chat exists
-        const existingMessage = await messagesCollection.findOne({ chatId: new mongoose.Types.ObjectId(chatId) });
+        const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
         const newMessages: any[] = [];
     
-        // Handle text message with first image (if exists)
-        if (messageText || (images.length > 0 && messageText)) {
-          let imageUrl;
-          if (images.length > 0) {
-            const image = images[0];
-            const uniqueFilename = `${chatId}/${new Date().getTime()}_${image.originalname}`;
-            const file = bucket.file(uniqueFilename);
-            await file.save(image.buffer, {
-              metadata: {
-                contentType: image.mimetype,
-              },
-              public: true,
-            });
-            imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-          }
-    
+        // Handle text message
+        if (messageText) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
-            sender: new mongoose.Types.ObjectId(sender),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: imageUrl,
+            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -267,43 +252,39 @@ export const socketHandler = (io: Server) => {
             attachments: [],
           };
           newMessages.push(textMessage);
-          // Remove the first image if it was used with the text message
-          if (images.length > 0) {
-            images.shift();
-          }
         }
     
-        // Handle remaining images
-        for (const image of images) {
-          const uniqueFilename = `${chatId}/${new Date().getTime()}_${image.originalname}`;
-          const file = bucket.file(uniqueFilename);
-          await file.save(image.buffer, {
-            metadata: {
-              contentType: image.mimetype,
-            },
-            public: true,
-          });
-          const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-    
-          const imageMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: new mongoose.Types.ObjectId(sender),
-            content: '',
-            imageUrl: imageUrl,
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
-          newMessages.push(imageMessage);
+        // Handle image uploads
+        if (images.length > 0) {
+          for (let i = 0; i < images.length; i++) {
+            const image = images[i];
+            
+            // Convert URI to buffer
+            
+            // Upload image and create message
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              content: '',
+              imageUrl: image,
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+              reactions: [],
+              attachments: [],
+            };
+            newMessages.push(imageMessage);
+          }
         }
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: new mongoose.Types.ObjectId(chatId) },
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
           { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
+        
+        
+        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
