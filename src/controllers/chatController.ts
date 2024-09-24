@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
+import RNFetchBlob from 'rn-fetch-blob';
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
@@ -39,15 +40,20 @@ const formatTime = (date: Date): string => {
 
 
     
-export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
-  const response = await fetch(uri);
+export async function resolveUriToBuffer(uri: string, fileName: string, mimeType: string): Promise<{ originalname: string; mimetype: string; buffer: Buffer }> {
+  try {
+    const path = await RNFetchBlob.fs.stat(uri); // Get the file path from the URI
+    const fileBuffer = await RNFetchBlob.fs.readFile(path.path, 'base64'); // Read the file as a base64 string
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image from URI: ${uri}`);
+    return {
+      originalname: fileName, // Pass the original file name
+      mimetype: mimeType, // Pass the mime type
+      buffer: Buffer.from(fileBuffer, 'base64'), // Convert base64 string to Buffer
+    };
+  } catch (error) {
+    console.error('Error resolving URI to buffer:', error);
+    throw new Error('Image buffer is missing');
   }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
 }
 
 // Upload image to cloud storage
@@ -85,35 +91,7 @@ export async function createTextMessage(sender: string, messageText: string, ima
 }
 
 // Helper function to create image messages
-export async function createImageMessages(images: any[], sender: string, chatId: string) {
-  const imageMessages: any[] = [];
 
-  for (const image of images) {
-    const imageBuffer = await resolveUriToBuffer(image.uri); // Convert URI to buffer
-    const customFile = {
-      originalname: image.name,
-      mimetype: image.type,
-      buffer: imageBuffer,
-    };
-
-    const imageUrl = await uploadImage(chatId, customFile); // Correctly provide both arguments
-    const imageMessage = {
-      messageId: new mongoose.Types.ObjectId(),
-      sender: mongoose.Types.ObjectId.createFromHexString(sender),
-      content: '',
-      imageUrl,
-      timestamp: new Date(),
-      status: 'Delivered',
-      isEdited: false,
-      reactions: [],
-      attachments: [],
-    };
-
-    imageMessages.push(imageMessage);
-  }
-
-  return imageMessages;
-}
 
 // Helper function to format messages
 export function formatMessages(messages: any[]) {
