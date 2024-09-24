@@ -1,7 +1,5 @@
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
-const rnFetchBlob = require('rn-fetch-blob');
-
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
@@ -41,22 +39,15 @@ const formatTime = (date: Date): string => {
 
     
 export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
-  if (uri.startsWith('content://')) {
-    // Fetch image data from Android content URI
-    const imagePath = await rnFetchBlob.fs.stat(uri);
-    const base64Image = await rnFetchBlob.fs.readFile(imagePath.path, 'base64');
-    return Buffer.from(base64Image, 'base64');
-  } else {
-    // For other types of URIs, use fetch (e.g., http:// or file://)
-    const response = await fetch(uri);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image from URI: ${uri}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  }
-}
+  const response = await fetch(uri);
 
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from URI: ${uri}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
 
 
 export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
@@ -64,21 +55,16 @@ export async function uploadImage(chatId: string, image: { originalname: string,
   const file = bucket.file(uniqueFilename);
   
   // Ensure that buffer is properly populated
-  if (!image.buffer || image.buffer.length === 0) {
-    throw new Error('Image buffer is missing or empty');
+  if (!image.buffer) {
+    throw new Error('Image buffer is missing');
   }
 
-  try {
-    await file.save(image.buffer, {
-      metadata: {
-        contentType: image.mimetype,
-      },
-      public: true, // Ensure the file is publicly accessible
-    });
+  await file.save(image.buffer, {
+    metadata: {
+      contentType: image.mimetype,
+    },
+    public: true, // Ensure the file is publicly accessible
+  });
 
-    return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-  } catch (error) {
-    throw error;
-  }
+  return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
 }
-
