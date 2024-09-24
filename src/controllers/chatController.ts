@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
 export const formatLastMessageDate = (timestamp: Date): string => {
@@ -67,4 +68,61 @@ export async function uploadImage(chatId: string, image: { originalname: string,
   });
 
   return `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+}
+export async function createTextMessage(sender: string, messageText: string, images: any[], chatId: string) {
+  const imageUrl = images.length > 0 ? await uploadImage(chatId, images[0]) : undefined; // Correctly provide both arguments
+  return {
+    messageId: new mongoose.Types.ObjectId(),
+    sender: mongoose.Types.ObjectId.createFromHexString(sender),
+    content: messageText,
+    imageUrl,
+    timestamp: new Date(),
+    status: 'Delivered',
+    isEdited: false,
+    reactions: [],
+    attachments: [],
+  };
+}
+
+// Helper function to create image messages
+export async function createImageMessages(images: any[], sender: string, chatId: string) {
+  const imageMessages: any[] = [];
+
+  for (const image of images) {
+    const imageBuffer = await resolveUriToBuffer(image.uri); // Convert URI to buffer
+    const customFile = {
+      originalname: image.name,
+      mimetype: image.type,
+      buffer: imageBuffer,
+    };
+
+    const imageUrl = await uploadImage(chatId, customFile); // Correctly provide both arguments
+    const imageMessage = {
+      messageId: new mongoose.Types.ObjectId(),
+      sender: mongoose.Types.ObjectId.createFromHexString(sender),
+      content: '',
+      imageUrl,
+      timestamp: new Date(),
+      status: 'Delivered',
+      isEdited: false,
+      reactions: [],
+      attachments: [],
+    };
+
+    imageMessages.push(imageMessage);
+  }
+
+  return imageMessages;
+}
+
+// Helper function to format messages
+export function formatMessages(messages: any[]) {
+  return messages.map((msg) => ({
+    formattedTime: msg.timestamp,
+    messageId: msg.messageId.toString(),
+    sender: msg.sender.toString(),
+    messageText: msg.content,
+    image: msg.imageUrl,
+    status: msg.status,
+  }));
 }

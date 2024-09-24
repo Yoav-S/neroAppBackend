@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
-import { formatLastMessageDate } from '../controllers/chatController';
+import { createImageMessages, createTextMessage, formatLastMessageDate, formatMessages } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 import { resolveUriToBuffer } from '../controllers/chatController';
 import { CustomFile } from './interfaces';
@@ -201,12 +201,11 @@ export const socketHandler = (io: Server) => {
     });
 
 
-    
     socket.on('sendMessage', async (formData) => {
-      try {
-        const db = getDatabase();
-        const messagesCollection = db.collection('Messages');
+      const db = getDatabase();
+      const messagesCollection = db.collection('Messages');
     
+      try {
         let messageText = '';
         let sender = '';
         let chatId = '';
@@ -227,9 +226,14 @@ export const socketHandler = (io: Server) => {
     
         console.log('Received data:', { messageText, sender, chatId, images });
     
+        // Check for required fields
+        if (!sender || !chatId) {
+          return socket.emit('error', { message: 'Sender and chatId are required.' });
+        }
+    
         // Check if the chat exists
-        const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
-        if (!existingMessage) {
+        const existingChat = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
+        if (!existingChat) {
           return socket.emit('error', { message: 'Chat not found' });
         }
     
@@ -237,53 +241,20 @@ export const socketHandler = (io: Server) => {
     
         // Handle text message
         if (messageText) {
-          const textMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
+          const textMessage = await createTextMessage(sender, messageText, images, chatId);
           newMessages.push(textMessage);
         }
     
         // Handle image uploads
         if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const image = images[i];
-    
-            // Convert URI to buffer
-            const imageBuffer = await resolveUriToBuffer(image.uri); // Use a utility function to convert image URI to buffer
-            const customFile = {
-              originalname: image.name,
-              mimetype: image.type,
-              buffer: imageBuffer,
-            };
-    
-            // Upload image and create message
-            const imageMessage = {
-              messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: '',
-              imageUrl: await uploadImage(chatId, customFile), // Uploading the image
-              timestamp: new Date(),
-              status: 'Delivered',
-              isEdited: false,
-              reactions: [],
-              attachments: [],
-            };
-            newMessages.push(imageMessage);
-          }
+          const imageMessages = await createImageMessages(images, sender, chatId);
+          newMessages.push(...imageMessages);
         }
     
         // Save the messages
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-          { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
+          { $push: { messages: { $each: newMessages } } } as any
         );
     
         if (result.modifiedCount === 0) {
@@ -291,15 +262,7 @@ export const socketHandler = (io: Server) => {
         }
     
         // Emit success to client
-        const formattedMessages = newMessages.map((msg) => ({
-          formattedTime: msg.timestamp,
-          messageId: msg.messageId.toString(),
-          sender: msg.sender.toString(),
-          messageText: msg.content,
-          image: msg.imageUrl,
-          status: msg.status,
-        }));
-    
+        const formattedMessages = formatMessages(newMessages);
         io.to(chatId).emit('newMessage', formattedMessages);
         socket.emit('messageSent', { success: true, messages: formattedMessages });
       } catch (error) {
@@ -307,6 +270,11 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
+    // Helper function to create text message
+
+    
+    
     
     
     
