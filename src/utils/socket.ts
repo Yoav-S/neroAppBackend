@@ -5,6 +5,7 @@ import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 import { resolveUriToBuffer } from '../controllers/chatController';
 import { CustomFile } from './interfaces';
+import multer from 'multer';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -199,16 +200,18 @@ export const socketHandler = (io: Server) => {
       }
     });
 
+
+    
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-        
+    
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -252,15 +255,15 @@ export const socketHandler = (io: Server) => {
         if (images.length > 0) {
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
-            
+    
             // Convert URI to buffer
-            const imageBuffer = await resolveUriToBuffer(image.uri);
+            const imageBuffer = await resolveUriToBuffer(image.uri); // Use a utility function to convert image URI to buffer
             const customFile = {
               originalname: image.name,
               mimetype: image.type,
               buffer: imageBuffer,
             };
-            
+    
             // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
@@ -279,12 +282,9 @@ export const socketHandler = (io: Server) => {
     
         // Save the messages
         const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
           { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
-        
-        
-        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');

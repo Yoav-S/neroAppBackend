@@ -49,11 +49,11 @@ export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
-
+// Upload image to cloud storage
 export async function uploadImage(chatId: string, image: { originalname: string, mimetype: string, buffer: Buffer }): Promise<string> {
   const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
   const file = bucket.file(uniqueFilename);
-  
+
   // Ensure that buffer is properly populated
   if (!image.buffer) {
     throw new Error('Image buffer is missing');
