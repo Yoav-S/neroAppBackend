@@ -217,7 +217,7 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'images') {
+          } else if (key === 'imagesUrl') {
             if (value.uri) {
               images.push(value); // Ensure valid image data
             } else {
