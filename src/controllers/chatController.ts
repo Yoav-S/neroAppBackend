@@ -1,3 +1,4 @@
+import RNFetchBlob from 'rn-fetch-blob';
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
 export const formatLastMessageDate = (timestamp: Date): string => {
@@ -39,16 +40,19 @@ const formatTime = (date: Date): string => {
 
     
 export async function resolveUriToBuffer(uri: string): Promise<Buffer> {
-  try {
+  if (uri.startsWith('content://')) {
+    // Fetch image data from Android content URI
+    const imagePath = await RNFetchBlob.fs.stat(uri);
+    const base64Image = await RNFetchBlob.fs.readFile(imagePath.path, 'base64');
+    return Buffer.from(base64Image, 'base64');
+  } else {
+    // For other types of URIs, use fetch (e.g., http:// or file://)
     const response = await fetch(uri);
     if (!response.ok) {
       throw new Error(`Failed to fetch image from URI: ${uri}`);
     }
-
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
-  } catch (error) {
-    throw error;
   }
 }
 
