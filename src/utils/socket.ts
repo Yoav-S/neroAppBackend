@@ -309,6 +309,8 @@ export const socketHandler = (io: Server) => {
     });
     
     
+    
+    
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
