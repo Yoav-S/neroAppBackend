@@ -2,10 +2,8 @@ import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
-import { uploadImage } from '../controllers/chatController';
-import { resolveUriToBuffer } from '../controllers/chatController';
+
 import { CustomFile } from './interfaces';
-import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -218,7 +216,7 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'imagesUrl') {
+          } else if (key === 'images') {
             images.push(value); // Capture image objects
           }
         });
@@ -233,42 +231,35 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message (including image if available)
-        const textMessage = {
-          messageId: new mongoose.Types.ObjectId(),
-          sender: mongoose.Types.ObjectId.createFromHexString(sender),
-          content: messageText,
-          imageUrl: images.length > 0 ? images[0] : undefined, // Include the first image if it exists
-          timestamp: new Date(),
-          status: 'Delivered',
-          isEdited: false,
-          reactions: [],
-          attachments: [],
-        };
-        newMessages.push(textMessage);
+        // Handle text message
+        if (messageText) {
+          const textMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: messageText,
+            imageUrl: images[0],
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(textMessage);
+        }
     
         // Handle image uploads
         if (images.length > 0) {
-          for (const image of images.slice(1)) { // Starts from the second image
-            const uniqueFilename = `Chats/${new mongoose.Types.ObjectId()}/${image.originalname}`;
-            const file = bucket.file(uniqueFilename);
+          for (let i = 0; i < images.length; i++) {
+            const image = images[i];
             
-            // Upload image to storage bucket
-            await file.save(image.buffer, {
-              metadata: {
-                contentType: image.mimetype,
-              },
-              public: true,
-            });
-    
-            const fileUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+            // Convert URI to buffe
             
-            // Create message object for the image
+            // Upload image and create message
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: fileUrl, // Use the uploaded image URL
+              imageUrl: image,
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -284,6 +275,9 @@ export const socketHandler = (io: Server) => {
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
           { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
+        
+        
+        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
@@ -306,7 +300,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
     
     
 
