@@ -1,6 +1,7 @@
-import RNFetchBlob from 'rn-fetch-blob';
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
+import RNFetchBlob from 'rn-fetch-blob';
+
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
