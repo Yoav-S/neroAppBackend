@@ -5,6 +5,7 @@ import { formatLastMessageDate } from '../controllers/chatController';
 import { uploadImage } from '../controllers/chatController';
 import { resolveUriToBuffer } from '../controllers/chatController';
 import { CustomFile } from './interfaces';
+import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -207,26 +208,20 @@ export const socketHandler = (io: Server) => {
         let messageText = '';
         let sender = '';
         let chatId = '';
-        let images: Express.Multer.File[] = [];
-    
+        let images: any[] = [];
+        
         // Extract data from formData
-        for (const [key, value] of Object.entries(formData)) {
+        formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
-            messageText = value as string;
+            messageText = value;
           } else if (key === 'sender') {
-            sender = value as string;
+            sender = value;
           } else if (key === 'chatId') {
-            chatId = value as string;
-          } else if (key === 'images') {
-            if (Array.isArray(value)) {
-              images = value as Express.Multer.File[];
-            } else {
-              images = [value as Express.Multer.File];
-            }
+            chatId = value;
+          } else if (key === 'imagesUrl') {
+            images.push(value); // Capture image objects
           }
-        }
-    
-        console.log('Received data:', { messageText, sender, chatId, images });
+        });
     
         console.log('Received data:', { messageText, sender, chatId, images });
     
@@ -238,35 +233,42 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message
-        if (messageText) {
-          const textMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: messageText,
-            imageUrl: images.length > 0 ? await uploadImage(chatId, images[0]) : undefined,
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
-          newMessages.push(textMessage);
-        }
+        // Handle text message (including image if available)
+        const textMessage = {
+          messageId: new mongoose.Types.ObjectId(),
+          sender: mongoose.Types.ObjectId.createFromHexString(sender),
+          content: messageText,
+          imageUrl: images.length > 0 ? images[0] : undefined, // Include the first image if it exists
+          timestamp: new Date(),
+          status: 'Delivered',
+          isEdited: false,
+          reactions: [],
+          attachments: [],
+        };
+        newMessages.push(textMessage);
     
         // Handle image uploads
         if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const image = images[i];
+          for (const image of images.slice(1)) { // Starts from the second image
+            const uniqueFilename = `Chats/${new mongoose.Types.ObjectId()}/${image.originalname}`;
+            const file = bucket.file(uniqueFilename);
             
-            // Convert URI to buffer
+            // Upload image to storage bucket
+            await file.save(image.buffer, {
+              metadata: {
+                contentType: image.mimetype,
+              },
+              public: true,
+            });
+    
+            const fileUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
             
-            // Upload image and create message
+            // Create message object for the image
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
               content: '',
-              imageUrl: image,
+              imageUrl: fileUrl, // Use the uploaded image URL
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
@@ -282,9 +284,6 @@ export const socketHandler = (io: Server) => {
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
           { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
         );
-        
-        
-        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
@@ -307,6 +306,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
 
