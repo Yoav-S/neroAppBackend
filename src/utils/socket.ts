@@ -231,10 +231,20 @@ export const socketHandler = (io: Server) => {
         }
     
         const newMessages: any[] = [];
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for image size
+        const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
     
         // Handle the first image with text (if any)
         if (messageText && images.length > 0) {
           const firstImage = images[0];
+    
+          // Check image file size and MIME type
+          if (firstImage.size > MAX_FILE_SIZE) {
+            return socket.emit('error', { message: 'File size exceeds the 5MB limit' });
+          }
+          if (!ALLOWED_MIME_TYPES.includes(firstImage.type)) {
+            return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
+          }
     
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
@@ -268,6 +278,14 @@ export const socketHandler = (io: Server) => {
     
         // Handle remaining images without text
         for (const image of images) {
+          // Check image file size and MIME type
+          if (image.size > MAX_FILE_SIZE) {
+            return socket.emit('error', { message: 'File size exceeds the 5MB limit' });
+          }
+          if (!ALLOWED_MIME_TYPES.includes(image.type)) {
+            return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
+          }
+    
           const uniqueFilename = `Chats/${chatId}/${image.name}`; // Ensure the same path structure
           const file = bucket.file(uniqueFilename);
           await file.save(image.uri, {
@@ -321,6 +339,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
