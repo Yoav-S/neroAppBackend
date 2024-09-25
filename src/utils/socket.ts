@@ -232,7 +232,7 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for image size
-        const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
+        const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
     
         // Handle the first image with text (if any)
         if (messageText && images.length > 0) {
@@ -252,7 +252,7 @@ export const socketHandler = (io: Server) => {
           const file = bucket.file(uniqueFilename);
           await file.save(firstImage.uri, {
             metadata: {
-              contentType: firstImage.mimetype,
+              contentType: firstImage.type,
             },
             public: true,
           });
