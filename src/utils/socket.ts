@@ -203,7 +203,7 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
@@ -237,7 +237,7 @@ export const socketHandler = (io: Server) => {
           const firstImage = images[0];
     
           // Upload the first image to Firebase Storage
-          const uniqueFilename = `Chats/${chatId}/${firstImage.name}`;
+          const uniqueFilename = `Chats/${chatId}/${firstImage.originalname}`;
           const file = bucket.file(uniqueFilename);
           await file.save(firstImage.buffer, {
             metadata: {
@@ -268,7 +268,7 @@ export const socketHandler = (io: Server) => {
     
         // Handle remaining images without text
         for (const image of images) {
-          const uniqueFilename = `Chats/${chatId}/${image.name}`;
+          const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
           const file = bucket.file(uniqueFilename);
           await file.save(image.buffer, {
             metadata: {
@@ -295,12 +295,10 @@ export const socketHandler = (io: Server) => {
         }
     
         // Save the messages in the chat
-// Using 'as any' to bypass TypeScript type issues
-            const result = await messagesCollection.updateOne(
-              { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-              { $push: { messages: { $each: newMessages } } as any }
-            );
-
+        const result = await messagesCollection.updateOne(
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { $push: { messages: { $each: newMessages } } as any }
+        );
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
@@ -323,6 +321,8 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
+    
     
     
     
