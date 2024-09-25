@@ -237,7 +237,7 @@ export const socketHandler = (io: Server) => {
           const firstImage = images[0];
     
           // Upload the first image to Firebase Storage
-          const uniqueFilename = `Chats/${chatId}/${firstImage.name}`;
+          const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
           const file = bucket.file(uniqueFilename);
           await file.save(firstImage.uri, {
             metadata: {
@@ -268,7 +268,7 @@ export const socketHandler = (io: Server) => {
     
         // Handle remaining images without text
         for (const image of images) {
-          const uniqueFilename = `Chats/${chatId}/${image.name}`;
+          const uniqueFilename = `Chats/${chatId}/${image.name}`; // Ensure the same path structure
           const file = bucket.file(uniqueFilename);
           await file.save(image.uri, {
             metadata: {
@@ -321,6 +321,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
