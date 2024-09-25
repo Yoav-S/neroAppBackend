@@ -4,6 +4,7 @@ import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
 
 import { CustomFile } from './interfaces';
+import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
     socket.on('joinRoom', (chatId: string) => {
@@ -207,7 +208,7 @@ export const socketHandler = (io: Server) => {
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-        
+    
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -231,53 +232,75 @@ export const socketHandler = (io: Server) => {
     
         const newMessages: any[] = [];
     
-        // Handle text message
-        if (messageText) {
-          const textMessage = {
+        // Handle the first image with text (if any)
+        if (messageText && images.length > 0) {
+          const firstImage = images[0];
+    
+          // Upload the first image to Firebase Storage
+          const uniqueFilename = `Chats/${chatId}/${firstImage.name}`;
+          const file = bucket.file(uniqueFilename);
+          await file.save(firstImage.buffer, {
+            metadata: {
+              contentType: firstImage.mimetype,
+            },
+            public: true,
+          });
+    
+          const firstImageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+    
+          // Create the message with text and the first image
+          const firstMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: messageText,
-            imageUrl: images[0],
+            content: messageText, // Text content with the first image
+            imageUrl: firstImageUrl,
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
             reactions: [],
             attachments: [],
           };
-          newMessages.push(textMessage);
+          newMessages.push(firstMessage);
+    
+          // Remove the first image from the list, so it won't be processed again
+          images.shift();
         }
     
-        // Handle image uploads
-        if (images.length > 0) {
-          for (let i = 0; i < images.length; i++) {
-            const image = images[i];
-            
-            // Convert URI to buffe
-            
-            // Upload image and create message
-            const imageMessage = {
-              messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: '',
-              imageUrl: image,
-              timestamp: new Date(),
-              status: 'Delivered',
-              isEdited: false,
-              reactions: [],
-              attachments: [],
-            };
-            newMessages.push(imageMessage);
-          }
+        // Handle remaining images without text
+        for (const image of images) {
+          const uniqueFilename = `Chats/${chatId}/${image.name}`;
+          const file = bucket.file(uniqueFilename);
+          await file.save(image.buffer, {
+            metadata: {
+              contentType: image.mimetype,
+            },
+            public: true,
+          });
+    
+          const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+    
+          // Create message for each image without text content
+          const imageMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: '', // No text content
+            imageUrl: imageUrl,
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(imageMessage);
         }
     
-        // Save the messages
-        const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) }, 
-          { $push: { messages: { $each: newMessages } } } as any // Cast to 'any' to bypass TypeScript's type checking
-        );
-        
-        
-        
+        // Save the messages in the chat
+// Using 'as any' to bypass TypeScript type issues
+            const result = await messagesCollection.updateOne(
+              { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+              { $push: { messages: { $each: newMessages } } as any }
+            );
+
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
@@ -300,6 +323,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
 
