@@ -249,9 +249,9 @@ export const socketHandler = (io: Server) => {
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
           const file = bucket.file(uniqueFilename);
-          await file.save(firstImage.uri, {
+          await file.save(firstImage.buffer, {
             metadata: {
-              contentType: firstImage.type,
+              contentType: firstImage.mimetype,
             },
             public: true,
           });
