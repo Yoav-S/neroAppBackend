@@ -245,11 +245,12 @@ export const socketHandler = (io: Server) => {
           if (!ALLOWED_MIME_TYPES.includes(firstImage.type)) {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
-    
+          console.log('firstImage', firstImage);
+          
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
           const file = bucket.file(uniqueFilename);
-          await file.save(firstImage.buffer, {
+          await file.save(firstImage.uri, {
             metadata: {
               contentType: firstImage.mimetype,
             },
