@@ -237,11 +237,11 @@ export const socketHandler = (io: Server) => {
           const firstImage = images[0];
     
           // Upload the first image to Firebase Storage
-          const uniqueFilename = `Chats/${chatId}/${firstImage.originalname}`;
+          const uniqueFilename = `Chats/${chatId}/${firstImage.name}`;
           const file = bucket.file(uniqueFilename);
-          await file.save(firstImage.buffer, {
+          await file.save(firstImage.uri, {
             metadata: {
-              contentType: firstImage.mimetype,
+              contentType: firstImage.type,
             },
             public: true,
           });
@@ -268,11 +268,11 @@ export const socketHandler = (io: Server) => {
     
         // Handle remaining images without text
         for (const image of images) {
-          const uniqueFilename = `Chats/${chatId}/${image.originalname}`;
+          const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
-          await file.save(image.buffer, {
+          await file.save(image.uri, {
             metadata: {
-              contentType: image.mimetype,
+              contentType: image.type,
             },
             public: true,
           });
@@ -321,6 +321,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
