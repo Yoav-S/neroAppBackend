@@ -227,10 +227,12 @@ export const socketHandler = (io: Server) => {
         let newMessages: any[] = []; // Initialize the newMessages array
     
         // Process image files
-        for (const image of images) {
+        for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
-          const fileBuffer = await getFileBufferFromUri(image.uri); // Get the buffer from the image URI
+    
+          // Resolve URI and get file buffer
+          const fileBuffer = await getFileBufferFromUri(image.uri);
           await file.save(fileBuffer, {
             metadata: {
               contentType: image.type,
@@ -244,7 +246,7 @@ export const socketHandler = (io: Server) => {
           const imageMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: messageText || '', // Text content or empty string
+            content: index === 0 ? messageText || '' : '', // First message includes text, subsequent ones don't
             imageUrl: imageUrl,
             timestamp: new Date(),
             status: 'Delivered',
@@ -259,23 +261,23 @@ export const socketHandler = (io: Server) => {
         // Save the messages in the chat
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-          { 
+          {
             $push: { messages: { $each: newMessages } } as any  // Cast the operation as 'any'
           }
         );
-        
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
     
-        io.to(chatId).emit('newMessage', newMessages);
-        socket.emit('messageSent', { success: true, messages: newMessages });
+        io.to(chatId).emit('newMessage', newMessages);  // Broadcast to the chat
+        socket.emit('messageSent', { success: true, messages: newMessages });  // Acknowledge the sender
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
