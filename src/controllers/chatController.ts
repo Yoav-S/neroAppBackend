@@ -1,5 +1,7 @@
 import { bucket } from '../config/firebaseConfig';
 import { CustomFile } from '../utils/interfaces';
+import { readFile } from 'fs/promises';
+
 export const formatLastMessageDate = (timestamp: Date): string => {
   const now = new Date();
   const messageDate = new Date(timestamp);
@@ -36,5 +38,15 @@ const formatTime = (date: Date): string => {
   return `${hours}:${minutes}`;
 };
 
+
+export async function getFileBufferFromUri(uri: string): Promise<Buffer> {
+  try {
+    // Read the file from the URI and return it as a buffer
+    const fileBuffer = await readFile(uri);
+    return fileBuffer;
+  } catch (error) {
+    throw new Error(`Failed to read file from URI: ${uri}, Error: ${error}`);
+  }
+}
 
 
