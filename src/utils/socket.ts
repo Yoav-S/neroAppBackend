@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
+
 import { CustomFile } from './interfaces';
 import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
@@ -198,7 +199,6 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-    
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
@@ -207,7 +207,7 @@ export const socketHandler = (io: Server) => {
         let messageText = '';
         let sender = '';
         let chatId = '';
-        let images: any[] = []; // Keeping it as 'any[]' as per your requirement
+        let images: any[] = [];
     
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
@@ -218,7 +218,7 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
-            images.push(value); // Collect images
+            images.push(value); // Capture image objects
           }
         });
     
@@ -234,16 +234,9 @@ export const socketHandler = (io: Server) => {
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for image size
         const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
     
-        // Helper function to fetch the image as a buffer
-        const getImageBuffer = async (uri: string) => {
-          const response = await fetch(uri);
-          if (!response.ok) throw new Error('Failed to fetch image');
-          return Buffer.from(await response.arrayBuffer());
-        };
-    
         // Handle the first image with text (if any)
         if (messageText && images.length > 0) {
-          const firstImage: any = images[0];
+          const firstImage = images[0];
     
           // Check image file size and MIME type
           if (firstImage.size > MAX_FILE_SIZE) {
@@ -252,16 +245,12 @@ export const socketHandler = (io: Server) => {
           if (!ALLOWED_MIME_TYPES.includes(firstImage.type)) {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
-    
           console.log('firstImage', firstImage);
-    
-          // Fetch the first image as a buffer
-          const buffer = await getImageBuffer(firstImage.uri); // Using the URI
-    
+          
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
           const file = bucket.file(uniqueFilename);
-          await file.save(buffer, {
+          await file.save(firstImage.uri, {
             metadata: {
               contentType: firstImage.type,
             },
@@ -298,12 +287,9 @@ export const socketHandler = (io: Server) => {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
     
-          // Fetch each image as a buffer
-          const buffer = await getImageBuffer(image.uri); // Using the URI
-    
           const uniqueFilename = `Chats/${chatId}/${image.name}`; // Ensure the same path structure
           const file = bucket.file(uniqueFilename);
-          await file.save(buffer, {
+          await file.save(image.uri, {
             metadata: {
               contentType: image.type,
             },
@@ -354,7 +340,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
     
     
     
