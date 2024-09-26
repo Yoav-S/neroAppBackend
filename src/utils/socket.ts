@@ -199,16 +199,17 @@ export const socketHandler = (io: Server) => {
       }
     });
 
+    
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+      
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+      
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -221,23 +222,23 @@ export const socketHandler = (io: Server) => {
             images.push(value); // Capture image objects
           }
         });
-    
+      
         console.log('Received data:', { messageText, sender, chatId, images });
-    
+      
         // Check if the chat exists
         const existingMessage = await messagesCollection.findOne({ chatId: mongoose.Types.ObjectId.createFromHexString(chatId) });
         if (!existingMessage) {
           return socket.emit('error', { message: 'Chat not found' });
         }
-    
+      
         const newMessages: any[] = [];
         const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for image size
         const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
-    
+      
         // Handle the first image with text (if any)
         if (messageText && images.length > 0) {
           const firstImage = images[0];
-    
+      
           // Check image file size and MIME type
           if (firstImage.size > MAX_FILE_SIZE) {
             return socket.emit('error', { message: 'File size exceeds the 5MB limit' });
@@ -245,20 +246,27 @@ export const socketHandler = (io: Server) => {
           if (!ALLOWED_MIME_TYPES.includes(firstImage.type)) {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
+      
           console.log('firstImage', firstImage);
           
+          // Fetch image data (using fetch to get the image content)
+          const response = await fetch(firstImage.uri);
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+      
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
           const file = bucket.file(uniqueFilename);
-          await file.save(firstImage.uri, {
+          await file.save(buffer, { // Use the image buffer for upload
             metadata: {
               contentType: firstImage.type,
             },
             public: true,
           });
-    
+      
           const firstImageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-    
+      
           // Create the message with text and the first image
           const firstMessage = {
             messageId: new mongoose.Types.ObjectId(),
@@ -272,11 +280,11 @@ export const socketHandler = (io: Server) => {
             attachments: [],
           };
           newMessages.push(firstMessage);
-    
+      
           // Remove the first image from the list, so it won't be processed again
           images.shift();
         }
-    
+      
         // Handle remaining images without text
         for (const image of images) {
           // Check image file size and MIME type
@@ -286,18 +294,24 @@ export const socketHandler = (io: Server) => {
           if (!ALLOWED_MIME_TYPES.includes(image.type)) {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
-    
+      
+          // Fetch image data
+          const response = await fetch(image.uri);
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+      
           const uniqueFilename = `Chats/${chatId}/${image.name}`; // Ensure the same path structure
           const file = bucket.file(uniqueFilename);
-          await file.save(image.uri, {
+          await file.save(buffer, {
             metadata: {
               contentType: image.type,
             },
             public: true,
           });
-    
+      
           const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-    
+      
           // Create message for each image without text content
           const imageMessage = {
             messageId: new mongoose.Types.ObjectId(),
@@ -312,17 +326,17 @@ export const socketHandler = (io: Server) => {
           };
           newMessages.push(imageMessage);
         }
-    
+      
         // Save the messages in the chat
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
           { $push: { messages: { $each: newMessages } } as any }
         );
-    
+      
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-    
+      
         // Emit success to client
         const formattedMessages = newMessages.map((msg) => ({
           formattedTime: msg.timestamp,
@@ -332,7 +346,7 @@ export const socketHandler = (io: Server) => {
           image: msg.imageUrl,
           status: msg.status,
         }));
-    
+      
         io.to(chatId).emit('newMessage', formattedMessages);
         socket.emit('messageSent', { success: true, messages: formattedMessages });
       } catch (error) {
@@ -340,6 +354,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
