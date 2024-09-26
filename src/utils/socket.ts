@@ -219,7 +219,7 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
-            images.push(value); // Capture image objects
+            images.push(value); // Collect images
           }
         });
       
@@ -249,11 +249,8 @@ export const socketHandler = (io: Server) => {
       
           console.log('firstImage', firstImage);
           
-          // Fetch image data (using fetch to get the image content)
-          const response = await fetch(firstImage.uri);
-          const blob = await response.blob();
-          const arrayBuffer = await blob.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+          // Directly access the file buffer from formData
+          const buffer = firstImage.buffer;  // Assuming `buffer` exists in the file object in formData
       
           // Upload the first image to Firebase Storage
           const uniqueFilename = `Chats/${chatId}/${firstImage.name}`; // Store images in Chats/chatId/
@@ -295,11 +292,8 @@ export const socketHandler = (io: Server) => {
             return socket.emit('error', { message: 'Unsupported file type. Only JPEG and PNG are allowed' });
           }
       
-          // Fetch image data
-          const response = await fetch(image.uri);
-          const blob = await response.blob();
-          const arrayBuffer = await blob.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+          // Directly access the file buffer from formData
+          const buffer = image.buffer;
       
           const uniqueFilename = `Chats/${chatId}/${image.name}`; // Ensure the same path structure
           const file = bucket.file(uniqueFilename);
