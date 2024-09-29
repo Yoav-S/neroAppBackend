@@ -208,7 +208,8 @@ export const socketHandler = (io: Server) => {
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+        console.log('formData:', formData);
+        
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -217,20 +218,24 @@ export const socketHandler = (io: Server) => {
             sender = value;
           } else if (key === 'chatId') {
             chatId = value;
-          } else if (key === 'images') {
+          } else if (key === 'imagesUrl') {
             images = value; // The base64-encoded images
           }
         });
     
         let newMessages: any[] = [];
-    
+        console.log(messageText, sender, chatId, images);
+        
         // Process image files
         for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
-    
+          console.log('file', file);
+          
           // Decode base64 back to buffer
           const fileBuffer = Buffer.from(image.base64, 'base64');
+          console.log('fileBuffer', fileBuffer);
+          
           await file.save(fileBuffer, {
             metadata: {
               contentType: image.type,
@@ -251,7 +256,8 @@ export const socketHandler = (io: Server) => {
             reactions: [],
             attachments: [],
           };
-    
+          console.log('imageMessage', imageMessage);
+          
           newMessages.push(imageMessage);
         }
     

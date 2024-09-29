@@ -73,6 +73,7 @@ export const deletePost = async (req: Request, res: Response) => {
 
     const token = authHeader.split(' ')[1];
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
+    
     const { postId } = req.body;
     const userId = decodedToken.userId;
 
