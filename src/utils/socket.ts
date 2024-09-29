@@ -227,7 +227,7 @@ export const socketHandler = (io: Server) => {
         console.log(messageText, sender, chatId, images);
         
         // Process image files
-        for (const [index, image] of images.entries()) {
+        for (const [index, image] of images) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
