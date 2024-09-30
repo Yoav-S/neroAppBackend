@@ -279,6 +279,7 @@ export const createPost = async (req: Request, res: Response) => {
       for (const image of images) {
         const uniqueFilename = `${savedPost._id}/${image.originalname}`;
         const file = bucket.file(uniqueFilename);
+        console.log('image.buffer', image.buffer);
         await file.save(image.buffer, {
           metadata: {
             contentType: image.mimetype,

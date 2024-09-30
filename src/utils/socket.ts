@@ -241,6 +241,8 @@ export const socketHandler = (io: Server) => {
           
           try {
             const fileBuffer = Buffer.from(image.uri.split(',')[1], 'base64'); // Decode base64 image data
+            console.log('fileBuffer: ' + fileBuffer);
+            
             console.log('File buffer created');
     
             // Upload image to Firebase Storage bucket
