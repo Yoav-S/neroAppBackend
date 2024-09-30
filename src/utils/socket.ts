@@ -2,8 +2,7 @@ import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
-
-import { CustomFile } from './interfaces';
+import fs from 'fs';
 import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
@@ -241,7 +240,8 @@ export const socketHandler = (io: Server) => {
           console.log('file', file);
           
           try {
-            const fileBuffer = Buffer.from(image.uri, 'base64');
+            const fileBuffer = fs.readFileSync(image.uri);
+    
             console.log('fileBuffer', fileBuffer);
             
             // Upload image to Firebase Storage bucket
