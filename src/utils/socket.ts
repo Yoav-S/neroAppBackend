@@ -231,9 +231,9 @@ export const socketHandler = (io: Server) => {
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
         
-        // Process image files (URI-based)
+        // Process image files
         for (const [index, image] of images.entries()) {
-          if (!image || !image.uri || !image.type || !image.name) {
+          if (!image || !image.base64 || !image.type || !image.name) {
             console.error('Invalid image data:', image);
             continue; // Skip this image and move to the next one
           }
@@ -242,29 +242,43 @@ export const socketHandler = (io: Server) => {
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
           
-          // Here, we would typically download the image from the URI and upload it to Firebase Storage
-          // However, this requires additional setup and libraries to handle HTTP requests
-          // For now, we'll just log that we would process the image here
-          console.log(`Would process image from URI: ${image.uri}`);
-          
-          // Placeholder for the image URL (in a real scenario, this would be the uploaded image URL)
-          const imageUrl = `https://placeholder.com/${uniqueFilename}`;
-          
-          // Construct the message object
-          const imageMessage = {
-            messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: index === 0 ? messageText || '' : '',
-            imageUrl,
-            timestamp: new Date(),
-            status: 'Delivered',
-            isEdited: false,
-            reactions: [],
-            attachments: [],
-          };
-          console.log('imageMessage', imageMessage);
-          
-          newMessages.push(imageMessage);
+          try {
+            const fileBuffer = Buffer.from(image.base64, 'base64');
+            console.log('fileBuffer', fileBuffer);
+            
+            // Upload image to Firebase Storage bucket
+            await file.save(fileBuffer, {
+              metadata: {
+                contentType: image.type,  // Ensure the image has a valid MIME type (e.g., 'image/jpeg', 'image/png')
+              },
+              public: true,  // Make the image publicly accessible
+            });
+            
+            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+            
+            // Construct the message object
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              content: index === 0 ? messageText || '' : '',
+              imageUrl,
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+              reactions: [],
+              attachments: [],
+            };
+            console.log('imageMessage', imageMessage);
+            
+            newMessages.push(imageMessage);
+          } catch (error) {
+            console.error('Error processing image:', error);
+            // Continue to the next image if there's an error with this one
+          }
+        }
+        
+        if (newMessages.length === 0) {
+          throw new Error('No valid messages to send');
         }
         
         // Save the messages in the chat
