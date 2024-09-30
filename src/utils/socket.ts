@@ -203,13 +203,14 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-      
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
+    
         console.log('formData:', formData);
-      
+    
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -222,33 +223,39 @@ export const socketHandler = (io: Server) => {
             images.push(value); // Push each image to the images array
           }
         });
-      
+    
+        if (!chatId || !sender) {
+          throw new Error('Chat ID and Sender are required');
+        }
+    
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
-      
+    
         // Process image files
         for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
-          
+    
           // Decode base64 back to buffer (assuming `image.base64` contains base64 data)
           const fileBuffer = Buffer.from(image.base64, 'base64');
           console.log('fileBuffer', fileBuffer);
-      
+    
+          // Upload image to bucket
           await file.save(fileBuffer, {
             metadata: {
-              contentType: image.type,
+              contentType: image.type,  // Ensure the image has a valid type
             },
-            public: true,
+            public: true,  // Make it publicly accessible
           });
-      
+    
           const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-      
+    
+          // Construct the message object
           const imageMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
-            content: index === 0 ? messageText || '' : '',
+            content: index === 0 ? messageText || '' : '',  // Attach text only to the first message
             imageUrl,
             timestamp: new Date(),
             status: 'Delivered',
@@ -257,29 +264,34 @@ export const socketHandler = (io: Server) => {
             attachments: [],
           };
           console.log('imageMessage', imageMessage);
-      
+    
           newMessages.push(imageMessage);
         }
-      
+    
         // Save the messages in the chat
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
           {
-            $push: { messages: { $each: newMessages } } as any  // Cast to 'any' to resolve type conflict
+            $push: { messages: { $each: newMessages } } as any,  // Cast to 'any' to resolve type conflict
           }
         );
-      
+    
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-      
-        io.to(chatId).emit('newMessage', newMessages);  // Broadcast to the chat
-        socket.emit('messageSent', { success: true, messages: newMessages });  // Acknowledge the sender
+    
+        // Broadcast the message to the chat room
+        io.to(chatId).emit('newMessage', newMessages);
+    
+        // Acknowledge the sender
+        socket.emit('messageSent', { success: true, messages: newMessages });
+    
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
