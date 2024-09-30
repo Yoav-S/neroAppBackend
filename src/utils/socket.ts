@@ -220,7 +220,7 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
-            images.push(value);
+            images.push(value); // Base64 data is here
           }
         });
         
@@ -236,12 +236,15 @@ export const socketHandler = (io: Server) => {
           
           console.log('image', image);
           
+          // Create a unique filename for each image
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
           
           try {
-            const fileBuffer = Buffer.from(image.uri, 'base64');
+            // Decode the base64 string to a buffer
+            const base64Data = image.base64; // Assuming this field contains base64 string
+            const fileBuffer = Buffer.from(base64Data, 'base64');  // Convert base64 to binary buffer
             console.log('fileBuffer', fileBuffer);
             
             // Upload image to Firebase Storage bucket
@@ -258,7 +261,7 @@ export const socketHandler = (io: Server) => {
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: index === 0 ? messageText || '' : '',
+              content: index === 0 ? messageText || '' : '', // Add text only with the first image
               imageUrl,
               timestamp: new Date(),
               status: 'Delivered',
@@ -302,6 +305,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
