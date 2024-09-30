@@ -233,11 +233,9 @@ export const socketHandler = (io: Server) => {
         
         // Process image files
         for (const [index, image] of images.entries()) {
-          if (!image || !image.base64 || !image.type || !image.name) {
-            console.error('Invalid image data:', image);
-            continue; // Skip this image and move to the next one
-          }
-    
+          
+          console.log('image', image);
+          
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
