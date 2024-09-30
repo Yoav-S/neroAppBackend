@@ -203,14 +203,14 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-        
+    
         console.log('formData:', formData);
-        
+    
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -223,41 +223,56 @@ export const socketHandler = (io: Server) => {
             images.push(value); // Base64 data is here
           }
         });
-        
+    
         if (!chatId || !sender) {
           throw new Error('Chat ID and Sender are required');
         }
-        
+    
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
-        
-        // Process image files
+    
+        // Handle text-only messages (no images provided)
+        if (messageText && images.length === 0) {
+          const textMessage = {
+            messageId: new mongoose.Types.ObjectId(),
+            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            content: messageText,
+            imageUrl: '', // No image
+            timestamp: new Date(),
+            status: 'Delivered',
+            isEdited: false,
+            reactions: [],
+            attachments: [],
+          };
+          newMessages.push(textMessage);
+        }
+    
+        // Process image files if they exist
         for (const [index, image] of images.entries()) {
-          
           console.log('image', image);
-          
+    
           // Create a unique filename for each image
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
-          
+    
           try {
             // Decode the base64 string to a buffer
-            const base64Data = image.base64; // Assuming this field contains base64 string
-            const fileBuffer = Buffer.from(base64Data, 'base64');  // Convert base64 to binary buffer
+            const base64Data = image.base64;
+            const fileBuffer = Buffer.from(base64Data, 'base64');
             console.log('fileBuffer', fileBuffer);
-            
+    
             // Upload image to Firebase Storage bucket
             await file.save(fileBuffer, {
               metadata: {
-                contentType: image.type,  // Ensure the image has a valid MIME type (e.g., 'image/jpeg', 'image/png')
+                contentType: image.type,
               },
-              public: true,  // Make the image publicly accessible
+              public: true,
             });
-            
+    
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-            
-            // Construct the message object
+    
+            // Construct the message object with or without text
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
@@ -270,18 +285,18 @@ export const socketHandler = (io: Server) => {
               attachments: [],
             };
             console.log('imageMessage', imageMessage);
-            
+    
             newMessages.push(imageMessage);
           } catch (error) {
             console.error('Error processing image:', error);
-            // Continue to the next image if there's an error with this one
           }
         }
-        
+    
+        // If no messages were created, throw an error
         if (newMessages.length === 0) {
           throw new Error('No valid messages to send');
         }
-        
+    
         // Save the messages in the chat
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
@@ -289,22 +304,23 @@ export const socketHandler = (io: Server) => {
             $push: { messages: { $each: newMessages } } as any,
           }
         );
-        
+    
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-        
+    
         // Broadcast the message to the chat room
         io.to(chatId).emit('newMessage', newMessages);
-        
+    
         // Acknowledge the sender
         socket.emit('messageSent', { success: true, messages: newMessages });
-        
+    
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
