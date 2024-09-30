@@ -219,10 +219,10 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
-            images = value; // The base64-encoded images
+            images.push(value); // Push each image to the images array
           }
         });
-    
+        
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
         
