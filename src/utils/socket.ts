@@ -208,7 +208,7 @@ export const socketHandler = (io: Server) => {
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
+        
         console.log('formData:', formData);
         
         // Extract data from formData
@@ -220,46 +220,45 @@ export const socketHandler = (io: Server) => {
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
-            images.push(value); // Collecting uploaded images
+            images.push(value);
           }
         });
         
-        // Validate essential fields
         if (!chatId || !sender) {
           throw new Error('Chat ID and Sender are required');
         }
-    
+        
         let newMessages: any[] = [];
-        console.log('Extracted:', { messageText, sender, chatId, images });
+        console.log(messageText, sender, chatId, images);
         
         // Process image files
         for (const [index, image] of images.entries()) {
-          console.log('Processing image:', image);
-    
-          const uniqueFilename = `Chats/${chatId}/${image.name || `image_${Date.now()}`}`; // Unique filename
+          
+          console.log('image', image);
+          
+          const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
+          console.log('file', file);
           
           try {
-            const fileBuffer = Buffer.from(image.uri.split(',')[1], 'base64'); // Decode base64 image data
-            console.log('fileBuffer: ' + fileBuffer);
+            const fileBuffer = Buffer.from(image.uri, 'base64');
+            console.log('fileBuffer', fileBuffer);
             
-            console.log('File buffer created');
-    
             // Upload image to Firebase Storage bucket
             await file.save(fileBuffer, {
               metadata: {
-                contentType: image.type || 'image/jpeg', // Ensure a valid MIME type
+                contentType: image.type,  // Ensure the image has a valid MIME type (e.g., 'image/jpeg', 'image/png')
               },
-              public: true, // Make the image publicly accessible
+              public: true,  // Make the image publicly accessible
             });
-    
+            
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-    
+            
             // Construct the message object
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: index === 0 ? messageText || '' : '', // Only add text with the first image
+              content: index === 0 ? messageText || '' : '',
               imageUrl,
               timestamp: new Date(),
               status: 'Delivered',
@@ -267,16 +266,15 @@ export const socketHandler = (io: Server) => {
               reactions: [],
               attachments: [],
             };
-            console.log('Image message constructed:', imageMessage);
+            console.log('imageMessage', imageMessage);
             
             newMessages.push(imageMessage);
           } catch (error) {
             console.error('Error processing image:', error);
-            // Handle errors with individual images but continue processing others
+            // Continue to the next image if there's an error with this one
           }
         }
         
-        // Check if any messages were created
         if (newMessages.length === 0) {
           throw new Error('No valid messages to send');
         }
