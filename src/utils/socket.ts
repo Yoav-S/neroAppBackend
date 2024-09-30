@@ -199,18 +199,18 @@ export const socketHandler = (io: Server) => {
       }
     });
 
-    socket.on('sendMessage', async (formData) => {
+    socket.on('sendMessage', async (formData: any) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-        
+  
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-        
+  
         console.log('formData:', formData);
-        
+  
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -223,37 +223,43 @@ export const socketHandler = (io: Server) => {
             images.push(value);
           }
         });
-        
+  
         if (!chatId || !sender) {
           throw new Error('Chat ID and Sender are required');
         }
-        
+  
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
-        
+  
         // Process image files
         for (const [index, image] of images.entries()) {
-          
           console.log('image', image);
-          
+  
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
-          
+  
           try {
-            const fileBuffer = Buffer.from(image.base64, 'base64');
-            console.log('fileBuffer', fileBuffer);
-            
+            // Fetch the image data from the content URI
+            const response = await fetch(image.uri);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+  
+            // Get the image data as an ArrayBuffer
+            const arrayBuffer = await response.arrayBuffer();
+            const imageBuffer = Buffer.from(arrayBuffer);
+  
             // Upload image to Firebase Storage bucket
-            await file.save(fileBuffer, {
+            await file.save(imageBuffer, {
               metadata: {
-                contentType: image.type,  // Ensure the image has a valid MIME type (e.g., 'image/jpeg', 'image/png')
+                contentType: image.type,
               },
-              public: true,  // Make the image publicly accessible
+              public: true, // Make the image publicly accessible
             });
-            
+  
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-            
+  
             // Construct the message object
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
@@ -267,18 +273,18 @@ export const socketHandler = (io: Server) => {
               attachments: [],
             };
             console.log('imageMessage', imageMessage);
-            
+  
             newMessages.push(imageMessage);
           } catch (error) {
             console.error('Error processing image:', error);
             // Continue to the next image if there's an error with this one
           }
         }
-        
+  
         if (newMessages.length === 0) {
           throw new Error('No valid messages to send');
         }
-        
+  
         // Save the messages in the chat
         const result = await messagesCollection.updateOne(
           { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
@@ -286,22 +292,23 @@ export const socketHandler = (io: Server) => {
             $push: { messages: { $each: newMessages } } as any,
           }
         );
-        
+  
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-        
+  
         // Broadcast the message to the chat room
         io.to(chatId).emit('newMessage', newMessages);
-        
+  
         // Acknowledge the sender
         socket.emit('messageSent', { success: true, messages: newMessages });
-        
+  
       } catch (error) {
         console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+  
     
     
     
