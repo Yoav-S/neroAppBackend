@@ -40,17 +40,6 @@ const formatTime = (date: Date): string => {
 
 
 
-export async function getFileBufferFromUri(uri: string): Promise<Buffer> {
-  try {
-    // Extract file path from URI and convert it into a format that can be used by the file system
-    const filePath = decodeURIComponent(uri.replace('content://', '/'));
-    
-    // Use 'readFile' to get the file buffer
-    const fileBuffer = await readFile(filePath);
-    return fileBuffer;
-  } catch (error) {
-    throw new Error(`Failed to read file from URI: ${uri}, Error: ${error}`);
-  }
-}
+
 
 

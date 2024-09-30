@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
-import { formatLastMessageDate, getFileBufferFromUri } from '../controllers/chatController';
+import { formatLastMessageDate } from '../controllers/chatController';
 
 import { CustomFile } from './interfaces';
 import { bucket } from '../config/firebaseConfig';
@@ -203,13 +203,13 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
-    
+      
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
         console.log('formData:', formData);
-        
+      
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
           if (key === 'messageText') {
@@ -222,29 +222,29 @@ export const socketHandler = (io: Server) => {
             images.push(value); // Push each image to the images array
           }
         });
-        
+      
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
-        
+      
         // Process image files
-        for (const [index, image] of images) {
+        for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
           console.log('file', file);
           
-          // Decode base64 back to buffer
+          // Decode base64 back to buffer (assuming `image.base64` contains base64 data)
           const fileBuffer = Buffer.from(image.base64, 'base64');
           console.log('fileBuffer', fileBuffer);
-          
+      
           await file.save(fileBuffer, {
             metadata: {
               contentType: image.type,
             },
             public: true,
           });
-    
+      
           const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
-    
+      
           const imageMessage = {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
@@ -257,24 +257,22 @@ export const socketHandler = (io: Server) => {
             attachments: [],
           };
           console.log('imageMessage', imageMessage);
-          
+      
           newMessages.push(imageMessage);
         }
-    
+      
         // Save the messages in the chat
-// Cast the update query as any to bypass the type-checking issues
-const result = await messagesCollection.updateOne(
-  { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-  {
-    $push: { messages: { $each: newMessages } } as any  // Cast to 'any' to resolve type conflict
-  }
-);
-
-    
+        const result = await messagesCollection.updateOne(
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          {
+            $push: { messages: { $each: newMessages } } as any  // Cast to 'any' to resolve type conflict
+          }
+        );
+      
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
         }
-    
+      
         io.to(chatId).emit('newMessage', newMessages);  // Broadcast to the chat
         socket.emit('messageSent', { success: true, messages: newMessages });  // Acknowledge the sender
       } catch (error) {
@@ -282,6 +280,7 @@ const result = await messagesCollection.updateOne(
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
