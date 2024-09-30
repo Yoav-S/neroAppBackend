@@ -231,7 +231,7 @@ export const socketHandler = (io: Server) => {
         let newMessages: any[] = [];
         console.log(messageText, sender, chatId, images);
     
-        // Process image files
+        // Process image files (base64)
         for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
@@ -241,12 +241,12 @@ export const socketHandler = (io: Server) => {
           const fileBuffer = Buffer.from(image.base64, 'base64');
           console.log('fileBuffer', fileBuffer);
     
-          // Upload image to bucket
+          // Upload image to Firebase Storage bucket
           await file.save(fileBuffer, {
             metadata: {
-              contentType: image.type,  // Ensure the image has a valid type
+              contentType: image.type,  // Ensure the image has a valid MIME type (e.g., 'image/jpeg', 'image/png')
             },
-            public: true,  // Make it publicly accessible
+            public: true,  // Make the image publicly accessible
           });
     
           const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
@@ -256,7 +256,7 @@ export const socketHandler = (io: Server) => {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: index === 0 ? messageText || '' : '',  // Attach text only to the first message
-            imageUrl,
+            imageUrl,  // Add the URL of the uploaded image
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
@@ -291,6 +291,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
