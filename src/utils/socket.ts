@@ -332,6 +332,39 @@ export const socketHandler = (io: Server) => {
     });
     
     
+    socket.on('updateUnreadMessage', async (chatId: string) => {
+      try {
+        const db = getDatabase();
+        const chatsCollection = db.collection('Chats');
+    
+        // Reset the unread message count for the given chat to 0
+        const result = await chatsCollection.updateOne(
+          { _id: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the chat by chatId
+          { $set: { unreadMessagesCount: 0 } } // Reset the unread message count to 0
+        );
+    
+        if (result.modifiedCount > 0) {
+          // Emit success response back to the frontend
+          socket.emit('messagesUpdated', {
+            success: true,
+            chatId: chatId,
+          });
+        } else {
+          // Emit failure response if no document was modified
+          socket.emit('messagesUpdated', {
+            success: false,
+            message: 'No chat found or no update made',
+          });
+        }
+      } catch (error: any) {
+        console.error('Error in updateUnreadMessage:', error);
+        // Emit error response back to the frontend
+        socket.emit('error', {
+          message: 'Error resetting unread messages',
+          error: error.message,
+        });
+      }
+    });
     
     
     
