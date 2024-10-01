@@ -2,8 +2,6 @@ import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
 import { formatLastMessageDate } from '../controllers/chatController';
-
-import { CustomFile } from './interfaces';
 import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
