@@ -335,21 +335,23 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const messagesCollection = db.collection('Messages');
     
-        // Fetch the chat messages in descending order (most recent first)
+        // Fetch unread messages in descending order
         const recentMessages = await messagesCollection.aggregate([
           { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
           { $unwind: '$messages' },
+          { $match: { 'messages.status': 'Delivered' } }, // Filter for Delivered messages
           { $sort: { 'messages.timestamp': -1 } }, // Sort by timestamp, descending
-          { $limit: messageDidntReadAmount } // Limit by the number of unread messages
+          { $limit: messageDidntReadAmount } // Limit to the number of unread messages
         ]).toArray();
     
         // Extract the messageIds of unread messages
         const messageIdsToUpdate = recentMessages.map((doc) => doc.messages.messageId);
     
-        // Update the status of the unread messages from 'Delivered' to 'Read'
+        // Use arrayFilters to target specific messages in the array
         const result = await messagesCollection.updateMany(
-          { 'messages.messageId': { $in: messageIdsToUpdate }, 'messages.status': 'Delivered' },
-          { $set: { 'messages.$.status': 'Read' } }
+          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
+          { $set: { 'messages.$[msg].status': 'Read' } }, // Update all matched unread messages
+          { arrayFilters: [{ 'msg.messageId': { $in: messageIdsToUpdate } }] } // Use array filter for matching messageIds
         );
     
         if (result.modifiedCount > 0) {
@@ -375,6 +377,7 @@ export const socketHandler = (io: Server) => {
         });
       }
     });
+    
     
     
     
