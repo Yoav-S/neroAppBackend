@@ -64,9 +64,16 @@ export const socketHandler = (io: Server) => {
             const pipeline = [
               { $match: { chatId: chat._id } },
               { $unwind: '$messages' },
-              { $sort: { 'messages.timestamp': -1 } },  // Sort messages from newest to oldest
-              { $limit: 20 },  // Limit the number of messages to 20
-              { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
+              { $sort: { 'messages.timestamp': -1 } }, // Sort messages from newest to oldest
+              { $limit: 20 }, // Limit the number of messages to 20
+              {
+                $lookup: {
+                  from: 'users',
+                  localField: 'messages.sender',
+                  foreignField: '_id',
+                  as: 'senderInfo',
+                },
+              },
               {
                 $project: {
                   messageId: '$messages.messageId',
@@ -76,13 +83,14 @@ export const socketHandler = (io: Server) => {
                   status: '$messages.status',
                   image: '$messages.imageUrl',
                   timestamp: '$messages.timestamp',
+                  isLastMessageIsImage: {
+                    $cond: [{ $ne: ['$messages.imageUrl', null] }, true, false], // Check if imageUrl is not null
+                  },
                 },
               },
             ];
     
             const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
-            
-            // Reverse the order to match the getChatMessages direction
     
             let unreadMessagesCount = 0;
             for (const message of recentMessages) {
@@ -109,6 +117,7 @@ export const socketHandler = (io: Server) => {
               isLastMessageSenderIsTheUser:
                 lastMessage?.sender.toString() === userObjectId.toString(),
               lastMessageStatus: lastMessage?.status || '',
+              isLastMessageIsImage: lastMessage?.isLastMessageIsImage || false, // Add the new property
               recieverId: otherParticipantIds.toString(),
               isPinned: false,
               messagesDidntReadAmount: unreadMessagesCount,
@@ -133,6 +142,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
     socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
       try {
