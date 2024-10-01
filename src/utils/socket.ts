@@ -332,15 +332,26 @@ export const socketHandler = (io: Server) => {
     });
     
     
-    socket.on('updateUnreadMessage', async (chatId: string) => {
+    socket.on('updateUnreadMessage', async (messageDidntReadAmount: number, chatId: string) => {
       try {
         const db = getDatabase();
-        const chatsCollection = db.collection('Chats');
+        const messagesCollection = db.collection('Messages');
     
-        // Reset the unread message count for the given chat to 0
-        const result = await chatsCollection.updateOne(
-          { _id: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the chat by chatId
-          { $set: { unreadMessagesCount: 0 } } // Reset the unread message count to 0
+        // Fetch the chat messages in descending order (most recent first)
+        const recentMessages = await messagesCollection.aggregate([
+          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
+          { $unwind: '$messages' },
+          { $sort: { 'messages.timestamp': -1 } }, // Sort by timestamp, descending
+          { $limit: messageDidntReadAmount } // Limit by the number of unread messages
+        ]).toArray();
+    
+        // Extract the messageIds of unread messages
+        const messageIdsToUpdate = recentMessages.map((doc) => doc.messages.messageId);
+    
+        // Update the status of the unread messages from 'Delivered' to 'Read'
+        const result = await messagesCollection.updateMany(
+          { 'messages.messageId': { $in: messageIdsToUpdate }, 'messages.status': 'Delivered' },
+          { $set: { 'messages.$.status': 'Read' } }
         );
     
         if (result.modifiedCount > 0) {
@@ -348,23 +359,25 @@ export const socketHandler = (io: Server) => {
           socket.emit('messagesUpdated', {
             success: true,
             chatId: chatId,
+            updatedCount: result.modifiedCount, // Return the number of messages updated
           });
         } else {
           // Emit failure response if no document was modified
           socket.emit('messagesUpdated', {
             success: false,
-            message: 'No chat found or no update made',
+            message: 'No messages updated',
           });
         }
       } catch (error: any) {
         console.error('Error in updateUnreadMessage:', error);
         // Emit error response back to the frontend
         socket.emit('error', {
-          message: 'Error resetting unread messages',
+          message: 'Error updating message statuses',
           error: error.message,
         });
       }
     });
+    
     
     
     
