@@ -13,7 +13,7 @@ export const socketHandler = (io: Server) => {
     // Handle fetching chat messages
     socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
       try {
-        const limit = 7;
+        const limit = 8;
         const skip = pageNumber * limit;
     
         // Convert userId to ObjectId
