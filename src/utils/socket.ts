@@ -241,7 +241,7 @@ export const socketHandler = (io: Server) => {
             messageId: new mongoose.Types.ObjectId(),
             sender: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: '', // No image
+            imageUrl: null, // No image
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
