@@ -8,9 +8,7 @@ export const socketHandler = (io: Server) => {
     socket.on('joinRoom', (chatId: string) => {
       socket.join(chatId);  // Joins the chat room with the chatId
     });
-    
 
-    // Handle fetching chat messages
     socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
       try {
         const limit = 7;
@@ -136,7 +134,6 @@ export const socketHandler = (io: Server) => {
           },
         });
       } catch (error) {
-        console.error('Error in getChatsPagination:', error);
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
@@ -202,7 +199,6 @@ export const socketHandler = (io: Server) => {
 
         socket.emit('chatMessagesResponse', response);
       } catch (error) {
-        console.error('Error in getChatMessages:', error);
         socket.emit('error', { message: 'Server error' });
       }
     });
@@ -324,7 +320,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('messageSent', { success: true, messages: newMessages });
     
       } catch (error) {
-        console.error('Error sending message:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
@@ -367,8 +362,6 @@ export const socketHandler = (io: Server) => {
           });
         }
       } catch (error: any) {
-        console.error('Error in updateUnreadMessage:', error);
-        // Emit error response back to the frontend
         socket.emit('error', {
           message: 'Error updating message statuses',
           error: error.message,
@@ -377,11 +370,35 @@ export const socketHandler = (io: Server) => {
     });
     
     
+    socket.on('deleteChat', async ({ chatId, userId}: { chatId: string; userId: string }) => {
+      try {
+
+
+        socket.emit('deleteChatResponse');
+      } catch (error) {
+        socket.emit('error', { message: 'Server error' });
+      }
+    });
     
+    socket.on('pinChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
+      try {
+
+
+        socket.emit('pinChatResponse');
+      } catch (error) {
+        socket.emit('error', { message: 'Server error' });
+      }
+    });
     
-    
-    
-    
+    socket.on('muteChat', async ({ chatId, userId }: { chatId: string; userId: string  }) => {
+      try {
+
+
+        socket.emit('muteChatResponse');
+      } catch (error) {
+        socket.emit('error', { message: 'Server error' });
+      }
+    });
     
     
     
