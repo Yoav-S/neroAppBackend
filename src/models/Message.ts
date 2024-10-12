@@ -34,21 +34,7 @@ const MessageSchema: Schema = new Schema(
           enum: ['Not delivered', 'Sent', 'Delivered', 'Read', 'Changed', 'In progress'],
           default: 'In progress'
         },
-        isEdited: { type: Boolean, default: false },
-        reactions: [
-          {
-            userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-            reaction: { type: String }
-          }
-        ],
-        attachments: [
-          {
-            attachmentId: { type: String },
-            type: { type: String },
-            url: { type: String },
-            thumbnail: { type: String }
-          }
-        ]
+        isEdited: { type: Boolean, default: false }
       }
     ]
   },

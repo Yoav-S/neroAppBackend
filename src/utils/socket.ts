@@ -144,15 +144,16 @@ export const socketHandler = (io: Server) => {
         const pageSize = 20;
         const page = Math.max(1, Math.floor(Number(pageNumber) || 1));
         const skip = (page - 1) * pageSize;
-
+    
         const db = getDatabase();
-        const messagesCollection = db.collection('Messages');
-
+        const chatsCollection = db.collection('Chats'); // Use Chats collection
+    
+        // Updated pipeline to retrieve from the messages array inside Chats
         const pipeline = [
-          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
-          { $project: { messages: { $slice: [{ $reverseArray: '$messages' }, skip, pageSize] } } },
-          { $unwind: '$messages' },
-          { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } },
+          { $match: { _id: mongoose.Types.ObjectId.createFromHexString(chatId) } }, // Match the chat by chatId
+          { $project: { messages: { $slice: [{ $reverseArray: '$messages' }, skip, pageSize] } } }, // Reverse messages and paginate
+          { $unwind: '$messages' }, // Unwind the messages array to access individual messages
+          { $lookup: { from: 'users', localField: 'messages.sender', foreignField: '_id', as: 'senderInfo' } }, // Lookup sender info
           {
             $project: {
               messageId: '$messages.messageId',
@@ -162,20 +163,22 @@ export const socketHandler = (io: Server) => {
               status: '$messages.status',
               image: '$messages.imageUrl',
               timestamp: '$messages.timestamp',
+              isEdited: '$messages.isEdited', // Added the isEdited field
             },
           },
         ];
-
-        const chatMessages = await messagesCollection.aggregate(pipeline).toArray();
-
-        const totalMessagesResult = await messagesCollection.aggregate([
-          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
+    
+        const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+    
+        // Calculate total number of messages
+        const totalMessagesResult = await chatsCollection.aggregate([
+          { $match: { _id: mongoose.Types.ObjectId.createFromHexString(chatId) } },
           { $project: { messageCount: { $size: '$messages' } } },
         ]).toArray();
-
+    
         const totalItems = totalMessagesResult[0]?.messageCount || 0;
         const totalPages = Math.ceil(totalItems / pageSize);
-
+    
         const formattedChatMessages = chatMessages.map((message) => ({
           messageId: message.messageId,
           sender: message.sender,
@@ -184,8 +187,9 @@ export const socketHandler = (io: Server) => {
           status: message.status,
           image: message.image,
           timestamp: message.timestamp,
+          isEdited: message.isEdited,
         }));
-
+    
         const response = {
           success: true,
           data: formattedChatMessages,
@@ -196,12 +200,13 @@ export const socketHandler = (io: Server) => {
             totalItems: totalItems,
           },
         };
-
+    
         socket.emit('chatMessagesResponse', response);
       } catch (error) {
         socket.emit('error', { message: 'Server error' });
       }
     });
+    
 
     socket.on('sendMessage', async (formData) => {
       try {
