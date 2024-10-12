@@ -148,6 +148,8 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats'); // Use Chats collection
     
+        console.log(`Fetching chat messages for chatId: ${chatId}, page: ${page}, skip: ${skip}`); // Log chatId, page, and skip value
+    
         // Updated pipeline to retrieve from the messages array inside Chats
         const pipeline = [
           { $match: { _id: mongoose.Types.ObjectId.createFromHexString(chatId) } }, // Match the chat by chatId
@@ -168,7 +170,11 @@ export const socketHandler = (io: Server) => {
           },
         ];
     
+        console.log('Running pipeline:', JSON.stringify(pipeline, null, 2)); // Log the aggregation pipeline
+    
         const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+    
+        console.log(`Retrieved ${chatMessages.length} messages`); // Log the number of messages retrieved
     
         // Calculate total number of messages
         const totalMessagesResult = await chatsCollection.aggregate([
@@ -178,6 +184,8 @@ export const socketHandler = (io: Server) => {
     
         const totalItems = totalMessagesResult[0]?.messageCount || 0;
         const totalPages = Math.ceil(totalItems / pageSize);
+    
+        console.log(`Total messages: ${totalItems}, totalPages: ${totalPages}`); // Log total items and total pages
     
         const formattedChatMessages = chatMessages.map((message) => ({
           messageId: message.messageId,
@@ -190,6 +198,8 @@ export const socketHandler = (io: Server) => {
           isEdited: message.isEdited,
         }));
     
+        console.log('Formatted messages:', JSON.stringify(formattedChatMessages, null, 2)); // Log formatted messages
+    
         const response = {
           success: true,
           data: formattedChatMessages,
@@ -201,11 +211,15 @@ export const socketHandler = (io: Server) => {
           },
         };
     
+        console.log('Sending response:', JSON.stringify(response, null, 2)); // Log the final response
+    
         socket.emit('chatMessagesResponse', response);
       } catch (error) {
+        console.error('Error fetching chat messages:', error); // Log the error
         socket.emit('error', { message: 'Server error' });
       }
     });
+    
     
 
     socket.on('sendMessage', async (formData) => {
