@@ -10,6 +10,11 @@ export interface IChat extends Document {
   lastMessageContent?: string;
   lastMessageTimestamp?: Date;
   chatAvatar?: string;
+  chats: Array<{
+    chatId: IChat['_id'];
+    isPinned: boolean;
+    isMuted: boolean;
+  }>;
 }
 
 const ChatSchema: Schema = new Schema(
@@ -20,7 +25,13 @@ const ChatSchema: Schema = new Schema(
     lastMessageContent: { type: String },
     lastMessageTimestamp: { type: Date },
     chatAvatar: { type: String },
+    chats: [{
+      chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat' },
+      isPinned: { type: Boolean, default: false },
+      isMuted: { type: Boolean, default: false }
+    }]
   },
+  
   { timestamps: true }
 );
 
