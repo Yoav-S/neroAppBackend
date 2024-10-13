@@ -374,16 +374,27 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
     
-        console.log('Attempting to update document');
+        // Fetch and log the user document
+        const user = await usersCollection.findOne({
+          _id: mongoose.Types.ObjectId.createFromHexString(userId),
+        });
+    
+        console.log('Fetched user document:', user);
+    
+        if (!user) {
+          throw new Error('User not found');
+        }
+    
+        // Now attempt to update the document
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': chatId  // use chatId as string
+            'chats.chatId': chatId, // Assuming chatId is a string
           },
           {
             $set: {
-              'chats.$.isPinned': { $not: ['$chats.$.isPinned'] }
-            }
+              'chats.$.isPinned': { $not: ['$chats.$.isPinned'] },
+            },
           }
         );
     
@@ -406,12 +417,21 @@ export const socketHandler = (io: Server) => {
       }
     });
     
+    
     socket.on('muteChat', async ({ chatId, userId }) => {
       console.log('Received muteChat request:', { chatId, userId });
       try {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
+        const user = await usersCollection.findOne({
+          _id: mongoose.Types.ObjectId.createFromHexString(userId),
+        });
     
+        console.log('Fetched user document:', user);
+    
+        if (!user) {
+          throw new Error('User not found');
+        }
         console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
