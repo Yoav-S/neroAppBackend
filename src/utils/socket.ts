@@ -372,7 +372,7 @@ export const socketHandler = (io: Server) => {
       console.log('Received pinChat request:', { chatId, userId });
       try {
         const db = getDatabase();
-        const usersCollection = db.collection('Users');
+        const usersCollection = db.collection('users');
     
         // Fetch and log the user document
         const user = await usersCollection.findOne({
@@ -422,7 +422,7 @@ export const socketHandler = (io: Server) => {
       console.log('Received muteChat request:', { chatId, userId });
       try {
         const db = getDatabase();
-        const usersCollection = db.collection('Users');
+        const usersCollection = db.collection('users');
         const user = await usersCollection.findOne({
           _id: mongoose.Types.ObjectId.createFromHexString(userId),
         });
