@@ -90,7 +90,7 @@ export const socketHandler = (io: Server) => {
               
               // Map recentMessages with correct structure
               recentMessages: chat.messages
-                ? chat.messages.slice(-20).reverse().map((message: any) => ({
+                ? chat.messages.slice(-20).map((message: any) => ({
                     messageId: message.messageId,
                     sender: message.senderId, // Use senderId from message
                     messageText: message.content,
