@@ -209,8 +209,8 @@ export const socketHandler = (io: Server) => {
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
-        const messagesCollection = db.collection('Messages');
-    
+        const chatsCollection = db.collection('Chats'); // Use the Chats collection now
+        
         let messageText = '';
         let sender = '';
         let chatId = '';
@@ -304,12 +304,10 @@ export const socketHandler = (io: Server) => {
           throw new Error('No valid messages to send');
         }
     
-        // Save the messages in the chat
-        const result = await messagesCollection.updateOne(
-          { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) },
-          {
-            $push: { messages: { $each: newMessages } } as any,
-          }
+        // Save the messages to the chat's messages array in the Chats collection
+        const result = await chatsCollection.updateOne(
+          { _id: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the chat by chatId
+          { $push: { messages: { $each: newMessages } as any } } // Push new messages into the messages array
         );
     
         if (result.modifiedCount === 0) {
@@ -326,6 +324,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     socket.on('updateUnreadMessage', async (messageDidntReadAmount: number, chatId: string) => {
