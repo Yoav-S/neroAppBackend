@@ -331,23 +331,24 @@ export const socketHandler = (io: Server) => {
     socket.on('updateUnreadMessage', async (messageDidntReadAmount: number, chatId: string) => {
       try {
         const db = getDatabase();
-        const messagesCollection = db.collection('Messages');
-    
-        // Fetch the chat messages in descending order (most recent first)
-        const recentMessages = await messagesCollection.aggregate([
-          { $match: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId) } },
-          { $unwind: '$messages' },
-          { $sort: { 'messages.timestamp': -1 } }, // Sort by timestamp, descending
-          { $limit: messageDidntReadAmount } // Limit by the number of unread messages
+        const chatsCollection = db.collection('Chats');
+        
+        // Fetch the chat and unwind its messages
+        const recentMessages = await chatsCollection.aggregate([
+          { $match: { _id: mongoose.Types.ObjectId.createFromHexString(chatId) } }, // Find the specific chat
+          { $unwind: '$messages' }, // Unwind the messages array
+          { $match: { 'messages.status': 'Delivered' } }, // Filter only messages with status 'Delivered'
+          { $sort: { 'messages.timestamp': -1 } }, // Sort by timestamp in descending order
+          { $limit: messageDidntReadAmount }, // Limit to the number of unread messages
         ]).toArray();
-    
+        
         // Extract the messageIds of unread messages
         const messageIdsToUpdate = recentMessages.map((doc) => doc.messages.messageId);
     
         // Update the status of the unread messages from 'Delivered' to 'Read'
-        const result = await messagesCollection.updateMany(
-          { 'messages.messageId': { $in: messageIdsToUpdate }, 'messages.status': 'Delivered' },
-          { $set: { 'messages.$.status': 'Read' } }
+        const result = await chatsCollection.updateMany(
+          { _id: mongoose.Types.ObjectId.createFromHexString(chatId), 'messages.messageId': { $in: messageIdsToUpdate }, 'messages.status': 'Delivered' },
+          { $set: { 'messages.$.status': 'Read' } } // Update the status of each unread message
         );
     
         if (result.modifiedCount > 0) {
@@ -371,6 +372,7 @@ export const socketHandler = (io: Server) => {
         });
       }
     });
+    
     
     
     socket.on('deleteChat', async ({ chatId, userId}: { chatId: string; userId: string }) => {
