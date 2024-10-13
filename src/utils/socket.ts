@@ -21,7 +21,6 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
         const usersCollection = db.collection('users');
-        const messagesCollection = db.collection('Messages');
     
         // Fetch chats where the user is a participant
         const chats = await chatsCollection
@@ -50,74 +49,45 @@ export const socketHandler = (io: Server) => {
               (id: Object) => id.toString() !== userObjectId.toString()
             );
     
-            // Fetch the other user info
+            // Fetch the other user's info
             const otherUser = await usersCollection.findOne(
               { _id: { $in: otherParticipantIds } },
               { projection: { picture: 1, firstName: 1, lastName: 1 } }
             );
     
-            // Use a pipeline to fetch and format the recent messages
-            const pipeline = [
-              { $match: { chatId: chat._id } },
-              { $unwind: '$messages' },
-              { $sort: { 'messages.timestamp': -1 } }, // Sort messages from newest to oldest
-              { $limit: 20 }, // Limit the number of messages to 20
-              {
-                $lookup: {
-                  from: 'users',
-                  localField: 'messages.sender',
-                  foreignField: '_id',
-                  as: 'senderInfo',
-                },
-              },
-              {
-                $project: {
-                  messageId: '$messages.messageId',
-                  sender: { $arrayElemAt: ['$senderInfo._id', 0] },
-                  messageText: '$messages.content',
-                  formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
-                  status: '$messages.status',
-                  image: '$messages.imageUrl',
-                  timestamp: '$messages.timestamp',
-                  isLastMessageIsImage: {
-                    $cond: [{ $ne: ['$messages.imageUrl', null] }, true, false], // Check if imageUrl is not null
-                  },
-                },
-              },
-            ];
-    
-            const recentMessages = await messagesCollection.aggregate(pipeline).toArray();
+            // Extract the last message from the messages array inside the chat document
+            const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
     
             let unreadMessagesCount = 0;
-            for (const message of recentMessages) {
-              if (
-                message.sender.toString() !== userObjectId.toString() &&
-                message.status !== 'Read'
-              ) {
-                unreadMessagesCount++;
-              } else {
-                break;
+            if (chat.messages) {
+              for (const message of chat.messages.reverse()) {
+                if (
+                  message.senderId.toString() !== userObjectId.toString() &&
+                  message.status !== 'Read'
+                ) {
+                  unreadMessagesCount++;
+                } else {
+                  break;
+                }
               }
             }
-    
-            const lastMessage = recentMessages[0];
     
             return {
               chatId: chat.chatId,
               profilePicture: otherUser?.picture || '',
               fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-              lastMessageText: lastMessage?.messageText || '',
+              lastMessageText: lastMessage?.content || '',
               lastMessageDate: lastMessage?.timestamp
                 ? formatLastMessageDate(new Date(lastMessage.timestamp))
                 : '',
               isLastMessageSenderIsTheUser:
-                lastMessage?.sender.toString() === userObjectId.toString(),
+                lastMessage?.senderId.toString() === userObjectId.toString(),
               lastMessageStatus: lastMessage?.status || '',
-              isLastMessageIsImage: lastMessage?.isLastMessageIsImage || false, // Add the new property
+              isLastMessageIsImage: lastMessage?.imageUrl ? true : false, // Check if the last message contains an image
               recieverId: otherParticipantIds.toString(),
               isPinned: false,
               messagesDidntReadAmount: unreadMessagesCount,
-              recentMessages, // Send the formatted messages to frontend
+              recentMessages: chat.messages ? chat.messages.slice(-20).reverse() : [], // Return the last 20 messages
             };
           })
         );
@@ -137,6 +107,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
     
     socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
