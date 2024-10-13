@@ -240,14 +240,12 @@ export const socketHandler = (io: Server) => {
         if (messageText && images.length === 0) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
-            sender: mongoose.Types.ObjectId.createFromHexString(sender),
+            senderId: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
             imageUrl: null, // No image
             timestamp: new Date(),
             status: 'Delivered',
             isEdited: false,
-            reactions: [],
-            attachments: [],
           };
           newMessages.push(textMessage);
         }
@@ -272,14 +270,12 @@ export const socketHandler = (io: Server) => {
     
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
-              sender: mongoose.Types.ObjectId.createFromHexString(sender),
+              senderId: mongoose.Types.ObjectId.createFromHexString(sender),
               content: index === 0 ? messageText || '' : '', // Add text only with the first image
               imageUrl,
               timestamp: new Date(),
               status: 'Delivered',
               isEdited: false,
-              reactions: [],
-              attachments: [],
             };
     
             newMessages.push(imageMessage);
