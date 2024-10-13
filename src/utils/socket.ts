@@ -370,23 +370,65 @@ export const socketHandler = (io: Server) => {
     
     socket.on('pinChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-
-
-        socket.emit('pinChatResponse');
+        const db = getDatabase();
+        const usersCollection = db.collection('Users');
+    
+        // Find the user's chat and toggle the isPinned field
+        const result = await usersCollection.updateOne(
+          {
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
+          },
+          {
+            $set: {
+              'chats.$.isPinned': { $eq: [false, '$chats.isPinned'] } // Toggle isPinned
+            }
+          }
+        );
+    
+        if (result.modifiedCount === 0) {
+          throw new Error('Failed to pin chat');
+        }
+    
+        // Emit the response back to the client
+        socket.emit('pinChatResponse', { success: true });
       } catch (error) {
+        console.error('Error pinning chat:', error);
         socket.emit('error', { message: 'Server error' });
       }
     });
     
-    socket.on('muteChat', async ({ chatId, userId }: { chatId: string; userId: string  }) => {
+    
+    socket.on('muteChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-
-
-        socket.emit('muteChatResponse');
+        const db = getDatabase();
+        const usersCollection = db.collection('Users');
+    
+        // Find the user's chat and toggle the isMuted field
+        const result = await usersCollection.updateOne(
+          {
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
+          },
+          {
+            $set: {
+              'chats.$.isMuted': { $eq: [false, '$chats.isMuted'] } // Toggle isMuted
+            }
+          }
+        );
+    
+        if (result.modifiedCount === 0) {
+          throw new Error('Failed to mute chat');
+        }
+    
+        // Emit the response back to the client
+        socket.emit('muteChatResponse', { success: true });
       } catch (error) {
+        console.error('Error muting chat:', error);
         socket.emit('error', { message: 'Server error' });
       }
     });
+    
     
     
     
