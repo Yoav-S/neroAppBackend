@@ -370,102 +370,64 @@ export const socketHandler = (io: Server) => {
     
     socket.on('pinChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-        console.log('pinChat triggered with chatId:', chatId, 'and userId:', userId); // Debug
-    
         const db = getDatabase();
         const usersCollection = db.collection('Users');
     
-        // Validate chatId and userId
-        if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(userId)) {
-          console.log('Invalid chatId or userId'); // Debug
-          throw new Error('Invalid chatId or userId format');
-        }
-    
-        // Convert to ObjectId
-        const chatObjectId = new mongoose.Types.ObjectId(chatId);
-        const userObjectId = new mongoose.Types.ObjectId(userId);
-    
-        console.log('Converted chatId and userId to ObjectId:', chatObjectId, userObjectId); // Debug
-    
-        // Toggle isPinned
+        // Find the user's chat and toggle the isPinned field
         const result = await usersCollection.updateOne(
           {
-            _id: userObjectId,
-            'chats.chatId': chatObjectId
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
           },
-          [
-            {
-              $set: {
-                'chats.$.isPinned': { $eq: [false, '$chats.isPinned'] } // Toggle isPinned
-              }
+          {
+            $set: {
+              'chats.$.isPinned': { $eq: [false, '$chats.isPinned'] } // Toggle isPinned
             }
-          ]
+          }
         );
     
-        console.log('Update result for pinChat:', result); // Debug
-    
         if (result.modifiedCount === 0) {
-          console.log('No document was modified in pinChat'); // Debug
           throw new Error('Failed to pin chat');
         }
     
+        // Emit the response back to the client
         socket.emit('pinChatResponse', { success: true });
-      } catch (error: any) {
-        socket.emit('error', { message: 'Server error: ' + error.message });
+      } catch (error) {
+        console.error('Error pinning chat:', error);
+        socket.emit('error', { message: 'Server error' });
       }
     });
-    
-    
     
     
     socket.on('muteChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-        console.log('muteChat triggered with chatId:', chatId, 'and userId:', userId); // Debug
-    
         const db = getDatabase();
         const usersCollection = db.collection('Users');
     
-        // Validate chatId and userId
-        if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(userId)) {
-          console.log('Invalid chatId or userId'); // Debug
-          throw new Error('Invalid chatId or userId format');
-        }
-    
-        // Convert to ObjectId
-        const chatObjectId = new mongoose.Types.ObjectId(chatId);
-        const userObjectId = new mongoose.Types.ObjectId(userId);
-    
-        console.log('Converted chatId and userId to ObjectId:', chatObjectId, userObjectId); // Debug
-    
-        // Toggle isMuted
+        // Find the user's chat and toggle the isMuted field
         const result = await usersCollection.updateOne(
           {
-            _id: userObjectId,
-            'chats.chatId': chatObjectId
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
           },
-          [
-            {
-              $set: {
-                'chats.$.isMuted': { $eq: [false, '$chats.isMuted'] } // Toggle isMuted
-              }
+          {
+            $set: {
+              'chats.$.isMuted': { $eq: [false, '$chats.isMuted'] } // Toggle isMuted
             }
-          ]
+          }
         );
     
-        console.log('Update result for muteChat:', result); // Debug
-    
         if (result.modifiedCount === 0) {
-          console.log('No document was modified in muteChat'); // Debug
           throw new Error('Failed to mute chat');
         }
     
+        // Emit the response back to the client
         socket.emit('muteChatResponse', { success: true });
-      } catch (error: any) {
-        socket.emit('error', { message: 'Server error: ' + error.message });
+      } catch (error) {
+        console.error('Error muting chat:', error);
+        socket.emit('error', { message: 'Server error' });
       }
     });
-    
-    
     
     
     
