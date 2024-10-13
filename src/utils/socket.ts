@@ -369,11 +369,12 @@ export const socketHandler = (io: Server) => {
     });
     
     socket.on('pinChat', async ({ chatId, userId }) => {
+      console.log('Received pinChat request:', { chatId, userId });
       try {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
   
-        // Find the user's chat and toggle the isPinned field
+        console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
             _id: new mongoose.Types.ObjectId(userId),
@@ -381,29 +382,37 @@ export const socketHandler = (io: Server) => {
           },
           {
             $set: {
-              'chats.$.isPinned': { $not: ['$chats.$.isPinned'] } // Toggle isPinned
+              'chats.$.isPinned': { $not: ['$chats.$.isPinned'] }
             }
           }
         );
   
+        console.log('Update result:', result);
+  
+        if (result.matchedCount === 0) {
+          console.log('No matching document found');
+          throw new Error('No matching document found');
+        }
+  
         if (result.modifiedCount === 0) {
+          console.log('Document matched but not modified');
           throw new Error('Failed to pin chat');
         }
   
-        // Emit the response back to the client
+        console.log('Chat pinned successfully');
         socket.emit('pinChatResponse', { success: true });
-      } catch (error) {
-        console.error('Error pinning chat:', error);
-        socket.emit('error', { message: 'Server error' });
+      } catch (error: any) {
+        socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
   
     socket.on('muteChat', async ({ chatId, userId }) => {
+      console.log('Received muteChat request:', { chatId, userId });
       try {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
   
-        // Find the user's chat and toggle the isMuted field
+        console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
             _id: new mongoose.Types.ObjectId(userId),
@@ -411,20 +420,27 @@ export const socketHandler = (io: Server) => {
           },
           {
             $set: {
-              'chats.$.isMuted': { $not: ['$chats.$.isMuted'] } // Toggle isMuted
+              'chats.$.isMuted': { $not: ['$chats.$.isMuted'] }
             }
           }
         );
   
+        console.log('Update result:', result);
+  
+        if (result.matchedCount === 0) {
+          console.log('No matching document found');
+          throw new Error('No matching document found');
+        }
+  
         if (result.modifiedCount === 0) {
+          console.log('Document matched but not modified');
           throw new Error('Failed to mute chat');
         }
   
-        // Emit the response back to the client
+        console.log('Chat muted successfully');
         socket.emit('muteChatResponse', { success: true });
-      } catch (error) {
-        console.error('Error muting chat:', error);
-        socket.emit('error', { message: 'Server error' });
+      } catch (error: any) {
+        socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
     
