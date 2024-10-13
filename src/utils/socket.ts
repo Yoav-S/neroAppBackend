@@ -377,8 +377,8 @@ export const socketHandler = (io: Server) => {
         console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
-            _id: new mongoose.Types.ObjectId(userId),
-            'chats.chatId': new mongoose.Types.ObjectId(chatId)
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
           },
           {
             $set: {
@@ -415,8 +415,8 @@ export const socketHandler = (io: Server) => {
         console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
-            _id: new mongoose.Types.ObjectId(userId),
-            'chats.chatId': new mongoose.Types.ObjectId(chatId)
+            _id: mongoose.Types.ObjectId.createFromHexString(userId),
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
           },
           {
             $set: {
