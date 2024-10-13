@@ -373,12 +373,12 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
-  
+    
         console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
+            'chats.chatId': chatId  // use chatId as string
           },
           {
             $set: {
@@ -386,37 +386,37 @@ export const socketHandler = (io: Server) => {
             }
           }
         );
-  
+    
         console.log('Update result:', result);
-  
+    
         if (result.matchedCount === 0) {
           console.log('No matching document found');
           throw new Error('No matching document found');
         }
-  
+    
         if (result.modifiedCount === 0) {
           console.log('Document matched but not modified');
           throw new Error('Failed to pin chat');
         }
-  
+    
         console.log('Chat pinned successfully');
         socket.emit('pinChatResponse', { success: true });
       } catch (error: any) {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
-  
+    
     socket.on('muteChat', async ({ chatId, userId }) => {
       console.log('Received muteChat request:', { chatId, userId });
       try {
         const db = getDatabase();
         const usersCollection = db.collection('Users');
-  
+    
         console.log('Attempting to update document');
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId)
+            'chats.chatId': chatId  // use chatId as string
           },
           {
             $set: {
@@ -424,25 +424,26 @@ export const socketHandler = (io: Server) => {
             }
           }
         );
-  
+    
         console.log('Update result:', result);
-  
+    
         if (result.matchedCount === 0) {
           console.log('No matching document found');
           throw new Error('No matching document found');
         }
-  
+    
         if (result.modifiedCount === 0) {
           console.log('Document matched but not modified');
           throw new Error('Failed to mute chat');
         }
-  
+    
         console.log('Chat muted successfully');
         socket.emit('muteChatResponse', { success: true });
       } catch (error: any) {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
+    
     
     
     
