@@ -216,7 +216,6 @@ export const socketHandler = (io: Server) => {
         let chatId = '';
         let images: any[] = [];
     
-        console.log('formData:', formData);
     
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
@@ -236,7 +235,6 @@ export const socketHandler = (io: Server) => {
         }
     
         let newMessages: any[] = [];
-        console.log(messageText, sender, chatId, images);
     
         // Handle text-only messages (no images provided)
         if (messageText && images.length === 0) {
@@ -256,20 +254,13 @@ export const socketHandler = (io: Server) => {
     
         // Process image files if they exist
         for (const [index, image] of images.entries()) {
-          console.log('image', image);
-    
-          // Create a unique filename for each image
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
-          console.log('file', file);
     
           try {
-            // Decode the base64 string to a buffer
             const base64Data = image.base64;
             const fileBuffer = Buffer.from(base64Data, 'base64');
-            console.log('fileBuffer', fileBuffer);
     
-            // Upload image to Firebase Storage bucket
             await file.save(fileBuffer, {
               metadata: {
                 contentType: image.type,
@@ -279,7 +270,6 @@ export const socketHandler = (io: Server) => {
     
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
     
-            // Construct the message object with or without text
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               sender: mongoose.Types.ObjectId.createFromHexString(sender),
@@ -291,11 +281,9 @@ export const socketHandler = (io: Server) => {
               reactions: [],
               attachments: [],
             };
-            console.log('imageMessage', imageMessage);
     
             newMessages.push(imageMessage);
           } catch (error) {
-            console.error('Error processing image:', error);
           }
         }
     
