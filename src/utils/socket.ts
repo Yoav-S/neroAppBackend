@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import mongoose from 'mongoose';
 import { getDatabase } from '../config/database';
-import { formatLastMessageDate } from '../controllers/chatController';
+import { formatLastMessageDate, formatTime } from '../controllers/chatController';
 import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
@@ -78,16 +78,29 @@ export const socketHandler = (io: Server) => {
               fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
               lastMessageText: lastMessage?.content || '',
               lastMessageDate: lastMessage?.timestamp
-                ? formatLastMessageDate(new Date(lastMessage.timestamp))
+                ? formatLastMessageDate(new Date(lastMessage.timestamp)) // Using the provided helper function
                 : '',
               isLastMessageSenderIsTheUser:
                 lastMessage?.senderId.toString() === userObjectId.toString(),
               lastMessageStatus: lastMessage?.status || '',
-              isLastMessageIsImage: lastMessage?.imageUrl ? true : false, // Check if the last message contains an image
+              isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
               recieverId: otherParticipantIds.toString(),
               isPinned: false,
               messagesDidntReadAmount: unreadMessagesCount,
-              recentMessages: chat.messages ? chat.messages.slice(-20).reverse() : [], // Return the last 20 messages
+              
+              // Map recentMessages with correct structure
+              recentMessages: chat.messages
+                ? chat.messages.slice(-20).reverse().map((message: any) => ({
+                    messageId: message.messageId,
+                    sender: message.senderId, // Use senderId from message
+                    messageText: message.content,
+                    formattedTime: formatTime(new Date(message.timestamp)), // Using the formatTime helper function
+                    status: message.status,
+                    image: message.imageUrl || '', // Provide default empty string if no image
+                    timestamp: message.timestamp,
+                    isEdited: message.isEdited || false, // Default to false if not provided
+                  }))
+                : [],
             };
           })
         );

@@ -32,7 +32,7 @@ export const formatLastMessageDate = (timestamp: Date): string => {
   }
 };
 
-const formatTime = (date: Date): string => {
+export const formatTime = (date: Date): string => {
   const hours = date.getHours();
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
