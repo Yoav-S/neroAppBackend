@@ -62,8 +62,8 @@ export const socketHandler = (io: Server) => {
     
         // Sort chats with messages by timestamp
         const sortByTimestamp = (a: any, b: any) => {
-          const timestampA = a.lastMessageTimestamp || a.updatedAt;
-          const timestampB = b.lastMessageTimestamp || b.updatedAt;
+          const timestampA = a.lastMessageDate || a.updatedAt;
+          const timestampB = b.lastMessageDate || b.updatedAt;
           return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
     
