@@ -8,186 +8,162 @@ export const socketHandler = (io: Server) => {
     socket.on('joinRoom', (chatId: string) => {
       socket.join(chatId);  // Joins the chat room with the chatId
     });
-socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
-  try {
-    const limit = 7;
-    const skip = pageNumber * limit;
-
-    // Convert userId to ObjectId
-    const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
-
-    // Connect to the database
-    const db = getDatabase();
-    const chatsCollection = db.collection('Chats');
-    const usersCollection = db.collection('users');
-
-    // Fetch the user's chat list to check for pinned chats
-    const user = await usersCollection.findOne(
-      { _id: userObjectId },
-      { projection: { chats: 1 } }
-    );
-
-    if (!user || !user.chats) {
-      return socket.emit('chatsPaginationResponse', {
-        success: true,
-        data: [],
-        pagination: {
-          isMore: false,
-          page: pageNumber,
-          totalPages: 0,
-          totalChats: 0,
-        },
-      });
-    }
-
-    // Retrieve pinned chat IDs
-    const pinnedChatIds = user.chats
-      .filter((chat: any) => chat.isPinned)
-      .map((chat: any) => chat.chatId);
-
-    // Fetch pinned chats
-    let pinnedChats = await chatsCollection
-      .find({ participants: { $in: [userObjectId] }, _id: { $in: pinnedChatIds } })
-      .sort({ lastMessageDate: -1, updatedAt: -1 })
-      .toArray();
-
-    // Debug logs for pinned chats
-    console.log("Pinned Chats before sorting:", pinnedChats);
-
-    // Reverse the order of pinnedChats
-    pinnedChats = pinnedChats.reverse();
-
-    // Separate pinned chats with and without messages
-    const pinnedChatsWithMessages = pinnedChats.filter((chat) => chat.messages && chat.messages.length > 0);
-    const pinnedChatsWithoutMessages = pinnedChats.filter((chat) => !chat.messages || chat.messages.length === 0);
-
-    // Debug logs for pinned chats sorting
-    console.log("Pinned Chats with messages:", pinnedChatsWithMessages);
-    console.log("Pinned Chats without messages:", pinnedChatsWithoutMessages);
-
-    // Fetch non-pinned chats
-    const nonPinnedChats = await chatsCollection
-      .find({ participants: { $in: [userObjectId] }, _id: { $nin: pinnedChatIds } })
-      .toArray();
-
-    // Debug logs for non-pinned chats
-    console.log("Non-pinned Chats before sorting:", nonPinnedChats);
-
-    // Separate non-pinned chats with and without messages
-    const nonPinnedChatsWithoutMessages = nonPinnedChats.filter((chat) => !chat.messages || chat.messages.length === 0);
-
-    const nonPinnedChatsWithMessages = nonPinnedChats
-      .filter((chat) => chat.messages && chat.messages.length > 0)
-      .sort((a, b) => {
-        const timestampA = a.lastMessageTimestamp || a.updatedAt;
-        const timestampB = b.lastMessageTimestamp || b.updatedAt;
-
-        console.log(`Sorting non-pinned chats with messages: ChatA (${timestampA}), ChatB (${timestampB})`);
-        return new Date(timestampB).getTime() - new Date(timestampA).getTime(); // Sort descending
-      });
-
-    // Debug logs for non-pinned chats sorting
-    console.log("Non-pinned Chats with messages:", nonPinnedChatsWithMessages);
-    console.log("Non-pinned Chats without messages:", nonPinnedChatsWithoutMessages);
-
-    // Combine pinned and non-pinned chats with appropriate order
-    const allChats = [
-      ...pinnedChatsWithMessages,
-      ...pinnedChatsWithoutMessages,
-      ...nonPinnedChatsWithMessages,
-      ...nonPinnedChatsWithoutMessages,
-    ];
-
-    // Debug final chat order
-    console.log("All Chats combined:", allChats);
-
-    if (allChats.length === 0) {
-      return socket.emit('chatsPaginationResponse', {
-        success: true,
-        data: [],
-        pagination: {
-          isMore: false,
-          page: pageNumber,
-          totalPages: 0,
-          totalChats: 0,
-        },
-      });
-    }
-
-    // Map chat details
-    const resultChats = await Promise.all(
-      allChats.map(async (chat) => {
-        const otherParticipantIds = chat.participants.filter(
-          (id: mongoose.Types.ObjectId) => id.toString() !== userObjectId.toString()
+    socket.on('getChatsPagination', async ({ userId, pageNumber }: any) => {
+      try {
+        const limit = 7;
+        const skip = pageNumber * limit;
+    
+        // Convert userId to ObjectId
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+    
+        // Connect to the database
+        const db = getDatabase();
+        const chatsCollection = db.collection('Chats');
+        const usersCollection = db.collection('users');
+    
+        // Fetch the user's chat list to check for pinned chats
+        const user = await usersCollection.findOne(
+          { _id: userObjectId },
+          { projection: { chats: 1 } }
         );
-
-        // Fetch the other user's info
-        const otherUser = await usersCollection.findOne(
-          { _id: { $in: otherParticipantIds } },
-          { projection: { picture: 1, firstName: 1, lastName: 1 } }
-        );
-
-        const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
-
-        let unreadMessagesCount = 0;
-        if (chat.messages) {
-          for (const message of chat.messages.reverse()) {
-            if (message.senderId.toString() !== userObjectId.toString() && message.status !== 'Read') {
-              unreadMessagesCount++;
-            } else {
-              break;
-            }
-          }
+    
+        if (!user || !user.chats) {
+          return socket.emit('chatsPaginationResponse', {
+            success: true,
+            data: [],
+            pagination: {
+              isMore: false,
+              page: pageNumber,
+              totalPages: 0,
+              totalChats: 0,
+            },
+          });
         }
-
-        return {
-          chatId: chat.chatId,
-          profilePicture: otherUser?.picture || '',
-          fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-          lastMessageText: lastMessage?.content || '',
-          lastMessageDate: lastMessage?.timestamp
-            ? formatLastMessageDate(new Date(lastMessage.timestamp))
-            : '',
-          isLastMessageSenderIsTheUser:
-            lastMessage?.senderId.toString() === userObjectId.toString(),
-          lastMessageStatus: lastMessage?.status || '',
-          isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
-          receiverId: otherParticipantIds.toString(),
-          isPinned: pinnedChatIds.includes(chat._id.toString()),
-          messagesDidntReadAmount: unreadMessagesCount,
-
-          recentMessages: chat.messages
-            ? chat.messages.slice(-20).map((message: any) => ({
-                messageId: message.messageId,
-                sender: message.senderId,
-                messageText: message.content,
-                formattedTime: formatTime(new Date(message.timestamp)),
-                status: message.status,
-                image: message.imageUrl || '',
-                timestamp: message.timestamp,
-                isEdited: message.isEdited || false,
-              }))
-            : [],
+    
+        // Retrieve pinned chat IDs
+        const pinnedChatIds = user.chats
+          .filter((chat: any) => chat.isPinned)
+          .map((chat: any) => chat.chatId);
+    
+        // Fetch all chats for the user
+        const allChats = await chatsCollection
+          .find({ participants: { $in: [userObjectId] } })
+          .toArray();
+    
+        // Separate pinned and non-pinned chats
+        const pinnedChats = allChats.filter((chat: any) => pinnedChatIds.includes(chat._id.toString()));
+        const nonPinnedChats = allChats.filter((chat: any) => !pinnedChatIds.includes(chat._id.toString()));
+    
+        // Separate chats with and without messages
+        const pinnedChatsWithMessages = pinnedChats.filter((chat: any) => chat.messages && chat.messages.length > 0);
+        const pinnedChatsWithoutMessages = pinnedChats.filter((chat: any) => !chat.messages || chat.messages.length === 0);
+        const nonPinnedChatsWithMessages = nonPinnedChats.filter((chat: any) => chat.messages && chat.messages.length > 0);
+        const nonPinnedChatsWithoutMessages = nonPinnedChats.filter((chat: any) => !chat.messages || chat.messages.length === 0);
+    
+        // Sort chats with messages by timestamp
+        const sortByTimestamp = (a: any, b: any) => {
+          const timestampA = a.lastMessageTimestamp || a.updatedAt;
+          const timestampB = b.lastMessageTimestamp || b.updatedAt;
+          return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
-      })
-    );
-
-    // Emit the response to the socket
-    socket.emit('chatsPaginationResponse', {
-      success: true,
-      data: resultChats,
-      pagination: {
-        isMore: nonPinnedChats.length === limit,
-        page: pageNumber,
-        totalPages: Math.ceil(nonPinnedChats.length / limit),
-        totalChats: allChats.length,
-      },
+    
+        pinnedChatsWithMessages.sort(sortByTimestamp);
+        nonPinnedChatsWithMessages.sort(sortByTimestamp);
+    
+        // Combine all groups in the desired order
+        const sortedChats = [
+          ...pinnedChatsWithMessages,
+          ...nonPinnedChatsWithMessages,
+          ...nonPinnedChatsWithoutMessages,
+          ...pinnedChatsWithoutMessages,
+        ];
+    
+        if (sortedChats.length === 0) {
+          return socket.emit('chatsPaginationResponse', {
+            success: true,
+            data: [],
+            pagination: {
+              isMore: false,
+              page: pageNumber,
+              totalPages: 0,
+              totalChats: 0,
+            },
+          });
+        }
+    
+        // Map chat details
+        const resultChats = await Promise.all(
+          sortedChats.map(async (chat: any) => {
+            const otherParticipantIds = chat.participants.filter(
+              (id: any) => id.toString() !== userObjectId.toString()
+            );
+    
+            // Fetch the other user's info
+            const otherUser = await usersCollection.findOne(
+              { _id: { $in: otherParticipantIds } },
+              { projection: { picture: 1, firstName: 1, lastName: 1 } }
+            );
+    
+            const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
+    
+            let unreadMessagesCount = 0;
+            if (chat.messages) {
+              for (const message of chat.messages.reverse()) {
+                if (message.senderId.toString() !== userObjectId.toString() && message.status !== 'Read') {
+                  unreadMessagesCount++;
+                } else {
+                  break;
+                }
+              }
+            }
+    
+            return {
+              chatId: chat.chatId,
+              profilePicture: otherUser?.picture || '',
+              fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
+              lastMessageText: lastMessage?.content || '',
+              lastMessageDate: lastMessage?.timestamp
+                ? formatLastMessageDate(new Date(lastMessage.timestamp))
+                : '',
+              isLastMessageSenderIsTheUser:
+                lastMessage?.senderId.toString() === userObjectId.toString(),
+              lastMessageStatus: lastMessage?.status || '',
+              isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
+              receiverId: otherParticipantIds.toString(),
+              isPinned: pinnedChatIds.includes(chat._id.toString()),
+              messagesDidntReadAmount: unreadMessagesCount,
+              recentMessages: chat.messages
+                ? chat.messages.slice(-20).map((message: any) => ({
+                    messageId: message.messageId,
+                    sender: message.senderId,
+                    messageText: message.content,
+                    formattedTime: formatTime(new Date(message.timestamp)),
+                    status: message.status,
+                    image: message.imageUrl || '',
+                    timestamp: message.timestamp,
+                    isEdited: message.isEdited || false,
+                  }))
+                : [],
+            };
+          })
+        );
+    
+        // Emit the response to the socket
+        socket.emit('chatsPaginationResponse', {
+          success: true,
+          data: resultChats,
+          pagination: {
+            isMore: sortedChats.length > (pageNumber + 1) * limit,
+            page: pageNumber,
+            totalPages: Math.ceil(sortedChats.length / limit),
+            totalChats: sortedChats.length,
+          },
+        });
+      } catch (error) {
+        console.error("Error in getChatsPagination:", error);
+        socket.emit('chatsPaginationResponse', { success: false });
+      }
     });
-  } catch (error) {
-    console.error("Error in getChatsPagination:", error);
-    socket.emit('chatsPaginationResponse', { success: false });
-  }
-});
 
     
     
