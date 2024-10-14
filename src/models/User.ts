@@ -15,7 +15,11 @@ export interface IUser extends Document {
   authProvider: 'LOCAL' | 'GOOGLE';
   createdAt: Date;
   updatedAt: Date;
-  chats: mongoose.Types.ObjectId[]; // New property to store user's chats
+  chats: Array<{
+    chatId: mongoose.Types.ObjectId;
+    isPinned: boolean;
+    isMuted: boolean;
+  }>; // Updated to store chatId, isPinned, and isMuted
 }
 
 export interface IUserCreate {
@@ -28,6 +32,7 @@ export interface IUserCreate {
   picture?: string;
   authProvider: 'LOCAL' | 'GOOGLE';
 }
+
 
 const UserSchema: Schema = new Schema(
   {
@@ -42,9 +47,14 @@ const UserSchema: Schema = new Schema(
     googleUserId: { type: String },
     picture: { type: String },
     authProvider: { type: String, enum: ['LOCAL', 'GOOGLE'], required: true },
-    chats: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Chat' }] // Reference to the Chat model
+    chats: [{
+      chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chat', required: true }, // Reference to Chat ObjectId
+      isPinned: { type: Boolean, default: false }, // Boolean to indicate if chat is pinned
+      isMuted: { type: Boolean, default: false } // Boolean to indicate if chat is muted
+    }]
   },
   { timestamps: true }
 );
 
 export default mongoose.model<IUser>('User', UserSchema);
+

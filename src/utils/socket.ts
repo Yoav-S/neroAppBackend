@@ -55,10 +55,10 @@ export const socketHandler = (io: Server) => {
         const nonPinnedChats = allChats.filter((chat: any) => !pinnedChatIds.includes(chat._id.toString()));
     
         // Separate chats with and without messages
-        const pinnedChatsWithMessages = pinnedChats.filter((chat: any) => chat.messages && chat.messages.length > 0);
-        const pinnedChatsWithoutMessages = pinnedChats.filter((chat: any) => !chat.messages || chat.messages.length === 0);
-        const nonPinnedChatsWithMessages = nonPinnedChats.filter((chat: any) => chat.messages && chat.messages.length > 0);
-        const nonPinnedChatsWithoutMessages = nonPinnedChats.filter((chat: any) => !chat.messages || chat.messages.length === 0);
+        const chatsWithMessages = (chats: any[]) =>
+          chats.filter((chat: any) => chat.messages && chat.messages.length > 0);
+        const chatsWithoutMessages = (chats: any[]) =>
+          chats.filter((chat: any) => !chat.messages || chat.messages.length === 0);
     
         // Sort chats with messages by timestamp
         const sortByTimestamp = (a: any, b: any) => {
@@ -67,15 +67,17 @@ export const socketHandler = (io: Server) => {
           return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
     
-        pinnedChatsWithMessages.sort(sortByTimestamp);
-        nonPinnedChatsWithMessages.sort(sortByTimestamp);
+        const pinnedChatsWithMessages = chatsWithMessages(pinnedChats).sort(sortByTimestamp);
+        const nonPinnedChatsWithMessages = chatsWithMessages(nonPinnedChats).sort(sortByTimestamp);
+        const pinnedChatsWithoutMessages = chatsWithoutMessages(pinnedChats);
+        const nonPinnedChatsWithoutMessages = chatsWithoutMessages(nonPinnedChats);
     
         // Combine all groups in the desired order
         const sortedChats = [
-          ...pinnedChatsWithMessages,
-          ...nonPinnedChatsWithMessages,
-          ...nonPinnedChatsWithoutMessages,
-          ...pinnedChatsWithoutMessages,
+          ...pinnedChatsWithMessages, // Pinned chats with messages at the top
+          ...nonPinnedChatsWithMessages, // Non-pinned chats with messages, sorted by timestamp
+          ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
+          ...pinnedChatsWithoutMessages, // Pinned chats without messages at the bottom
         ];
     
         if (sortedChats.length === 0) {
@@ -91,9 +93,12 @@ export const socketHandler = (io: Server) => {
           });
         }
     
+        // Paginate results
+        const paginatedChats = sortedChats.slice(skip, skip + limit);
+    
         // Map chat details
         const resultChats = await Promise.all(
-          sortedChats.map(async (chat: any) => {
+          paginatedChats.map(async (chat: any) => {
             const otherParticipantIds = chat.participants.filter(
               (id: any) => id.toString() !== userObjectId.toString()
             );
@@ -164,6 +169,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
 
     
     
