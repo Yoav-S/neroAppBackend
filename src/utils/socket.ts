@@ -15,6 +15,7 @@ export const socketHandler = (io: Server) => {
     
         // Convert userId to ObjectId
         const userObjectId = new mongoose.Types.ObjectId(userId);
+        console.log(`User ObjectId: ${userObjectId}`);
     
         // Connect to the database
         const db = getDatabase();
@@ -26,8 +27,10 @@ export const socketHandler = (io: Server) => {
           { _id: userObjectId },
           { projection: { chats: 1 } }
         );
+        console.log(`Fetched User: ${JSON.stringify(user)}`);
     
         if (!user || !user.chats) {
+          console.log(`No chats found for user ${userId}`);
           return socket.emit('chatsPaginationResponse', {
             success: true,
             data: [],
@@ -44,15 +47,23 @@ export const socketHandler = (io: Server) => {
         const pinnedChatIds = user.chats
           .filter((chat: any) => chat.isPinned)
           .map((chat: any) => chat.chatId);
+        console.log(`Pinned Chat IDs: ${pinnedChatIds}`);
     
         // Fetch all chats for the user
         const allChats = await chatsCollection
           .find({ participants: { $in: [userObjectId] } })
           .toArray();
+        console.log(`All Chats for User: ${JSON.stringify(allChats)}`);
     
         // Separate pinned and non-pinned chats
-        const pinnedChats = allChats.filter((chat: any) => pinnedChatIds.includes(chat._id.toString()));
-        const nonPinnedChats = allChats.filter((chat: any) => !pinnedChatIds.includes(chat._id.toString()));
+        const pinnedChats = allChats.filter((chat: any) =>
+          pinnedChatIds.includes(chat._id.toString())
+        );
+        const nonPinnedChats = allChats.filter((chat: any) =>
+          !pinnedChatIds.includes(chat._id.toString())
+        );
+        console.log(`Pinned Chats: ${JSON.stringify(pinnedChats)}`);
+        console.log(`Non-Pinned Chats: ${JSON.stringify(nonPinnedChats)}`);
     
         // Separate chats with and without messages
         const chatsWithMessages = (chats: any[]) =>
@@ -64,6 +75,7 @@ export const socketHandler = (io: Server) => {
         const sortByTimestamp = (a: any, b: any) => {
           const timestampA = a.lastMessageDate || a.updatedAt;
           const timestampB = b.lastMessageDate || b.updatedAt;
+          console.log(`Sorting - Timestamp A: ${timestampA}, Timestamp B: ${timestampB}`);
           return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
     
@@ -72,6 +84,12 @@ export const socketHandler = (io: Server) => {
         const pinnedChatsWithoutMessages = chatsWithoutMessages(pinnedChats);
         const nonPinnedChatsWithoutMessages = chatsWithoutMessages(nonPinnedChats);
     
+        // Log chat groups
+        console.log(`Pinned Chats With Messages: ${JSON.stringify(pinnedChatsWithMessages)}`);
+        console.log(`Non-Pinned Chats With Messages: ${JSON.stringify(nonPinnedChatsWithMessages)}`);
+        console.log(`Pinned Chats Without Messages: ${JSON.stringify(pinnedChatsWithoutMessages)}`);
+        console.log(`Non-Pinned Chats Without Messages: ${JSON.stringify(nonPinnedChatsWithoutMessages)}`);
+    
         // Combine all groups in the desired order
         const sortedChats = [
           ...pinnedChatsWithMessages, // Pinned chats with messages at the top
@@ -79,6 +97,8 @@ export const socketHandler = (io: Server) => {
           ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
           ...pinnedChatsWithoutMessages, // Pinned chats without messages at the bottom
         ];
+    
+        console.log(`Sorted Chats: ${JSON.stringify(sortedChats)}`);
     
         if (sortedChats.length === 0) {
           return socket.emit('chatsPaginationResponse', {
@@ -95,6 +115,7 @@ export const socketHandler = (io: Server) => {
     
         // Paginate results
         const paginatedChats = sortedChats.slice(skip, skip + limit);
+        console.log(`Paginated Chats: ${JSON.stringify(paginatedChats)}`);
     
         // Map chat details
         const resultChats = await Promise.all(
@@ -108,8 +129,10 @@ export const socketHandler = (io: Server) => {
               { _id: { $in: otherParticipantIds } },
               { projection: { picture: 1, firstName: 1, lastName: 1 } }
             );
+            console.log(`Other User: ${JSON.stringify(otherUser)}`);
     
             const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
+            console.log(`Last Message: ${JSON.stringify(lastMessage)}`);
     
             let unreadMessagesCount = 0;
             if (chat.messages) {
@@ -153,6 +176,8 @@ export const socketHandler = (io: Server) => {
           })
         );
     
+        console.log(`Result Chats: ${JSON.stringify(resultChats)}`);
+    
         // Emit the response to the socket
         socket.emit('chatsPaginationResponse', {
           success: true,
@@ -169,6 +194,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
 
     
