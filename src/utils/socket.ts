@@ -47,10 +47,12 @@ export const socketHandler = (io: Server) => {
           .map((chat: any) => chat.chatId);
     
         // Fetch pinned chats
-        const pinnedChats = await chatsCollection
-          .find({ participants: { $in: [userObjectId] }, _id: { $in: pinnedChatIds } })
-          .sort({ lastMessageTimestamp: -1 }) // Sort by lastMessageTimestamp (descending)
-          .toArray();
+// Fetch pinned chats sorted by lastMessageTimestamp in descending order
+            const pinnedChats = await chatsCollection
+              .find({ participants: { $in: [userObjectId] }, _id: { $in: pinnedChatIds } })
+              .sort({ lastMessageTimestamp: -1, updatedAt: -1 }) // Sort by lastMessageTimestamp and fallback to updatedAt if needed
+              .toArray();
+
     
         // Fetch non-pinned chats
         const nonPinnedChats = await chatsCollection
