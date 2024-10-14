@@ -62,9 +62,15 @@ export const socketHandler = (io: Server) => {
           .toArray();
     
         // Split non-pinned chats into those with and without message history
-        const nonPinnedChatsWithMessages = nonPinnedChats.filter(
-          (chat) => chat.messages && chat.messages.length > 0
-        ).reverse();
+        const nonPinnedChatsWithMessages = nonPinnedChats
+        .filter((chat) => chat.messages && chat.messages.length > 0) // Keep only chats with messages
+        .sort((a, b) => {
+          // Sort by lastMessageTimestamp or updatedAt if lastMessageTimestamp is unavailable
+          const timestampA = a.lastMessageTimestamp || a.updatedAt;
+          const timestampB = b.lastMessageTimestamp || b.updatedAt;
+          return new Date(timestampB).getTime() - new Date(timestampA).getTime(); // Sort in descending order
+        });
+      
         const nonPinnedChatsWithoutMessages = nonPinnedChats.filter(
           (chat) => !chat.messages || chat.messages.length === 0
         );
