@@ -48,7 +48,7 @@ socket.on('getChatsPagination', async ({ userId, pageNumber }) => {
     // Fetch pinned chats
     let pinnedChats = await chatsCollection
       .find({ participants: { $in: [userObjectId] }, _id: { $in: pinnedChatIds } })
-      .sort({ lastMessageTimestamp: -1, updatedAt: -1 })
+      .sort({ lastMessageDate: -1, updatedAt: -1 })
       .toArray();
 
     // Debug logs for pinned chats
