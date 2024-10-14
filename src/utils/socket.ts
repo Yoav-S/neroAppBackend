@@ -55,13 +55,25 @@ export const socketHandler = (io: Server) => {
         // Fetch non-pinned chats
         const nonPinnedChats = await chatsCollection
           .find({ participants: { $in: [userObjectId] }, _id: { $nin: pinnedChatIds } })
-          .sort({ lastMessageTimestamp: -1 }) // Sort by lastMessageTimestamp (descending)
-          .skip(skip)
-          .limit(limit)
           .toArray();
     
-        // Combine pinned chats at the top, followed by non-pinned chats
-        const allChats = [...pinnedChats, ...nonPinnedChats];
+        // Split non-pinned chats into those with and without message history
+        const nonPinnedChatsWithMessages = nonPinnedChats.filter(
+          (chat) => chat.messages && chat.messages.length > 0
+        );
+        const nonPinnedChatsWithoutMessages = nonPinnedChats.filter(
+          (chat) => !chat.messages || chat.messages.length === 0
+        );
+    
+        // Sort non-pinned chats with messages by lastMessageTimestamp (descending)
+        nonPinnedChatsWithMessages.sort((a, b) => {
+          const timeA = new Date(a.lastMessageTimestamp).getTime();
+          const timeB = new Date(b.lastMessageTimestamp).getTime();
+          return timeB - timeA; // Descending order
+        });
+    
+        // Combine pinned chats, non-pinned chats with messages, and then non-pinned chats without messages
+        const allChats = [...pinnedChats, ...nonPinnedChatsWithMessages, ...nonPinnedChatsWithoutMessages];
     
         if (allChats.length === 0) {
           return socket.emit('chatsPaginationResponse', {
@@ -154,6 +166,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
     
     
