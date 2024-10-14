@@ -369,27 +369,14 @@ export const socketHandler = (io: Server) => {
     });
     
     socket.on('pinChat', async ({ chatId, userId }) => {
-      console.log('Received pinChat request:', { chatId, userId });
       try {
-        const db = getDatabase(); // Fetch the MongoDB database
+        const db = getDatabase();
         const usersCollection = db.collection('users');
     
-        // Fetch and log the user document
-        const user = await usersCollection.findOne({
-          _id: mongoose.Types.ObjectId.createFromHexString(userId),
-        });
-    
-        console.log('Fetched user document:', user);
-    
-        if (!user) {
-          throw new Error('User not found');
-        }
-    
-        // Attempt to update the document
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': chatId, // Ensure chatId is a string
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Convert chatId to ObjectId
           },
           {
             $set: {
@@ -398,47 +385,26 @@ export const socketHandler = (io: Server) => {
           }
         );
     
-        console.log('Update result:', result);
-    
         if (result.matchedCount === 0) {
-          console.log('No matching document found');
           throw new Error('No matching document found');
         }
     
-        if (result.modifiedCount === 0) {
-          console.log('Document matched but not modified');
-          throw new Error('Failed to pin chat');
-        }
-    
-        console.log('Chat pinned successfully');
         socket.emit('pinChatResponse', { success: true });
       } catch (error: any) {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
     
+    
     socket.on('muteChat', async ({ chatId, userId }) => {
-      console.log('Received muteChat request:', { chatId, userId });
       try {
         const db = getDatabase();
         const usersCollection = db.collection('users');
-        
-        // Fetch and log the user document
-        const user = await usersCollection.findOne({
-          _id: mongoose.Types.ObjectId.createFromHexString(userId),
-        });
     
-        console.log('Fetched user document:', user);
-    
-        if (!user) {
-          throw new Error('User not found');
-        }
-    
-        // Attempt to update the document
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': chatId, // Ensure chatId is a string
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Convert chatId to ObjectId
           },
           {
             $set: {
@@ -447,24 +413,16 @@ export const socketHandler = (io: Server) => {
           }
         );
     
-        console.log('Update result:', result);
-    
         if (result.matchedCount === 0) {
-          console.log('No matching document found');
           throw new Error('No matching document found');
         }
     
-        if (result.modifiedCount === 0) {
-          console.log('Document matched but not modified');
-          throw new Error('Failed to mute chat');
-        }
-    
-        console.log('Chat muted successfully');
         socket.emit('muteChatResponse', { success: true });
       } catch (error: any) {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
+    
     
     
     
