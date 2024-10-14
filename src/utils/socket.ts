@@ -70,13 +70,15 @@ export const socketHandler = (io: Server) => {
     
         // Sort non-pinned chats with messages by lastMessageTimestamp (descending)
         const nonPinnedChatsWithMessages = nonPinnedChats
-        .filter((chat) => chat.messages && chat.messages.length > 0) // Keep only chats with messages
+        .filter((chat) => chat.messages && chat.messages.length > 0) // Filter chats with messages
         .sort((a, b) => {
-          // Sort by lastMessageTimestamp or updatedAt if lastMessageTimestamp is unavailable
           const timestampA = a.lastMessageTimestamp || a.updatedAt;
           const timestampB = b.lastMessageTimestamp || b.updatedAt;
-          return new Date(timestampB).getTime() - new Date(timestampA).getTime(); // Sort in descending order
+          
+          // Ensure valid dates, return -1 if timestampB is newer than timestampA (for descending order)
+          return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         });
+      
     
         // Combine pinned chats, non-pinned chats with messages, and then non-pinned chats without messages
         const allChats = [...pinnedChats, ...nonPinnedChatsWithMessages, ...nonPinnedChatsWithoutMessages];
