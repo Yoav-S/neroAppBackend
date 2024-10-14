@@ -73,8 +73,8 @@ export const socketHandler = (io: Server) => {
     
         // Sort chats with messages by timestamp
         const sortByTimestamp = (a: any, b: any) => {
-          const timestampA = a.lastMessageDate || a.updatedAt;
-          const timestampB = b.lastMessageDate || b.updatedAt;
+          const timestampA = a.lastMessageDate;
+          const timestampB = b.lastMessageDate;
           console.log(`Sorting - Timestamp A: ${timestampA}, Timestamp B: ${timestampB}`);
           return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
@@ -290,12 +290,11 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats'); // Use the Chats collection now
-        
+    
         let messageText = '';
         let sender = '';
         let chatId = '';
         let images: any[] = [];
-    
     
         // Extract data from formData
         formData._parts.forEach(([key, value]: [string, any]) => {
@@ -315,6 +314,8 @@ export const socketHandler = (io: Server) => {
         }
     
         let newMessages: any[] = [];
+        let lastMessageContent = messageText; // Default to the text content
+        let lastMessageDate = new Date(); // Current timestamp
     
         // Handle text-only messages (no images provided)
         if (messageText && images.length === 0) {
@@ -323,7 +324,7 @@ export const socketHandler = (io: Server) => {
             senderId: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
             imageUrl: null, // No image
-            timestamp: new Date(),
+            timestamp: lastMessageDate,
             status: 'Delivered',
             isEdited: false,
           };
@@ -359,7 +360,11 @@ export const socketHandler = (io: Server) => {
             };
     
             newMessages.push(imageMessage);
+            lastMessageContent = imageUrl; // If an image exists, update lastMessageContent with image URL
+            lastMessageDate = imageMessage.timestamp; // Set lastMessageDate to the timestamp of the image message
           } catch (error) {
+            console.error('Error saving image:', error);
+            continue; // Skip this image if there's an error
           }
         }
     
@@ -371,7 +376,13 @@ export const socketHandler = (io: Server) => {
         // Save the messages to the chat's messages array in the Chats collection
         const result = await chatsCollection.updateOne(
           { _id: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the chat by chatId
-          { $push: { messages: { $each: newMessages } as any } } // Push new messages into the messages array
+          {
+            $push: { messages: { $each: newMessages } as any }, // Push new messages into the messages array
+            $set: { 
+              lastMessageContent, // Update lastMessageContent
+              lastMessageDate, // Update lastMessageDate
+            }
+          }
         );
     
         if (result.modifiedCount === 0) {
@@ -385,9 +396,11 @@ export const socketHandler = (io: Server) => {
         socket.emit('messageSent', { success: true, messages: newMessages });
     
       } catch (error) {
+        console.error('Error in sendMessage:', error);
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
