@@ -373,14 +373,37 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const usersCollection = db.collection('users');
     
+        // First, fetch the user to find the current value of isPinned for the specific chat
+        const user = await usersCollection.findOne({
+          _id: mongoose.Types.ObjectId.createFromHexString(userId),
+          'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Match the chatId
+        });
+    
+        if (!user) {
+          throw new Error('User or chat not found');
+        }
+    
+        // Find the specific chat to toggle its `isPinned` value
+        const chat = user.chats.find(
+          (c: any) => c.chatId.toString() === chatId
+        );
+    
+        if (!chat) {
+          throw new Error('Chat not found');
+        }
+    
+        // Toggle the `isPinned` value
+        const newPinnedValue = !chat.isPinned;
+    
+        // Update the specific chat's `isPinned` value
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Convert chatId to ObjectId
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId),
           },
           {
             $set: {
-              'chats.$.isPinned': { $not: ['$chats.$.isPinned'] }, // Toggle isPinned
+              'chats.$.isPinned': newPinnedValue, // Directly set the new value
             },
           }
         );
@@ -396,19 +419,43 @@ export const socketHandler = (io: Server) => {
     });
     
     
+    
     socket.on('muteChat', async ({ chatId, userId }) => {
       try {
         const db = getDatabase();
         const usersCollection = db.collection('users');
     
+        // Fetch the user to find the current value of isMuted for the specific chat
+        const user = await usersCollection.findOne({
+          _id: mongoose.Types.ObjectId.createFromHexString(userId),
+          'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Match the chatId
+        });
+    
+        if (!user) {
+          throw new Error('User or chat not found');
+        }
+    
+        // Find the specific chat to toggle its `isMuted` value
+        const chat = user.chats.find(
+          (c: any) => c.chatId.toString() === chatId
+        );
+    
+        if (!chat) {
+          throw new Error('Chat not found');
+        }
+    
+        // Toggle the `isMuted` value
+        const newMutedValue = !chat.isMuted;
+    
+        // Update the specific chat's `isMuted` value
         const result = await usersCollection.updateOne(
           {
             _id: mongoose.Types.ObjectId.createFromHexString(userId),
-            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId), // Convert chatId to ObjectId
+            'chats.chatId': mongoose.Types.ObjectId.createFromHexString(chatId),
           },
           {
             $set: {
-              'chats.$.isMuted': { $not: ['$chats.$.isMuted'] }, // Toggle isMuted
+              'chats.$.isMuted': newMutedValue, // Directly set the new value
             },
           }
         );
@@ -422,6 +469,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
+    
     
     
     
