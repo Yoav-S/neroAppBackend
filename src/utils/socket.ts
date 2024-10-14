@@ -60,7 +60,7 @@ export const socketHandler = (io: Server) => {
         // Split non-pinned chats into those with and without message history
         const nonPinnedChatsWithMessages = nonPinnedChats.filter(
           (chat) => chat.messages && chat.messages.length > 0
-        );
+        ).reverse();
         const nonPinnedChatsWithoutMessages = nonPinnedChats.filter(
           (chat) => !chat.messages || chat.messages.length === 0
         );
