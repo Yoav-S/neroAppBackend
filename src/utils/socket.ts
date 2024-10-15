@@ -92,12 +92,16 @@ export const socketHandler = (io: Server) => {
         console.log(`Non-Pinned Chats Without Messages: ${JSON.stringify(nonPinnedChatsWithoutMessages)}`);
     
         // Combine all groups in the desired order
-        const sortedChats = [
-          ...pinnedChatsWithMessages, // Pinned chats with messages at the top
-          ...nonPinnedChatsWithMessages, // Non-pinned chats with messages, sorted by timestamp
-          ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
-          ...pinnedChatsWithoutMessages, // Pinned chats without messages at the bottom
-        ];
+// Combine all groups in the desired order
+              const sortedChats = [
+                ...pinnedChatsWithMessages,    // Pinned chats with messages (sorted)
+                ...pinnedChatsWithoutMessages, // Pinned chats without messages
+                ...nonPinnedChatsWithMessages, // Non-pinned chats with messages (sorted)
+                ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
+              ];
+
+console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
+
     
         console.log(`Sorted Chats: ${JSON.stringify(sortedChats)}`);
     
