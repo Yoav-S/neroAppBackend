@@ -22,7 +22,7 @@ export const socketHandler = (io: Server) => {
         const chatsCollection = db.collection('Chats');
         const usersCollection = db.collection('users');
     
-        // Fetch the user's chat list to check for pinned chats
+        // Fetch the user's chat list to check for pinned and muted chats
         const user = await usersCollection.findOne(
           { _id: userObjectId },
           { projection: { chats: 1 } }
@@ -43,11 +43,17 @@ export const socketHandler = (io: Server) => {
           });
         }
     
-        // Retrieve pinned chat IDs
+        // Retrieve pinned and muted chat IDs
         const pinnedChatIds = user.chats
           .filter((chat: any) => chat.isPinned)
           .map((chat: any) => chat.chatId);
+    
+        const mutedChatIds = user.chats
+          .filter((chat: any) => chat.isMuted)
+          .map((chat: any) => chat.chatId);
+    
         console.log(`Pinned Chat IDs: ${pinnedChatIds}`);
+        console.log(`Muted Chat IDs: ${mutedChatIds}`);
     
         // Fetch all chats for the user
         const allChats = await chatsCollection
@@ -62,9 +68,6 @@ export const socketHandler = (io: Server) => {
         const nonPinnedChats = allChats.filter((chat: any) =>
           !pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id))
         );
-        
-        console.log(`Pinned Chats: ${JSON.stringify(pinnedChats)}`);
-        console.log(`Non-Pinned Chats: ${JSON.stringify(nonPinnedChats)}`);
     
         // Separate chats with and without messages
         const chatsWithMessages = (chats: any[]) =>
@@ -76,7 +79,6 @@ export const socketHandler = (io: Server) => {
         const sortByTimestamp = (a: any, b: any) => {
           const timestampA = a.lastMessageDate;
           const timestampB = b.lastMessageDate;
-          console.log(`Sorting - Timestamp A: ${timestampA}, Timestamp B: ${timestampB}`);
           return new Date(timestampB).getTime() - new Date(timestampA).getTime();
         };
     
@@ -85,25 +87,13 @@ export const socketHandler = (io: Server) => {
         const pinnedChatsWithoutMessages = chatsWithoutMessages(pinnedChats);
         const nonPinnedChatsWithoutMessages = chatsWithoutMessages(nonPinnedChats);
     
-        // Log chat groups
-        console.log(`Pinned Chats With Messages: ${JSON.stringify(pinnedChatsWithMessages)}`);
-        console.log(`Non-Pinned Chats With Messages: ${JSON.stringify(nonPinnedChatsWithMessages)}`);
-        console.log(`Pinned Chats Without Messages: ${JSON.stringify(pinnedChatsWithoutMessages)}`);
-        console.log(`Non-Pinned Chats Without Messages: ${JSON.stringify(nonPinnedChatsWithoutMessages)}`);
-    
         // Combine all groups in the desired order
-// Combine all groups in the desired order
-              const sortedChats = [
-                ...pinnedChatsWithMessages,    // Pinned chats with messages (sorted)
-                ...pinnedChatsWithoutMessages, // Pinned chats without messages
-                ...nonPinnedChatsWithMessages, // Non-pinned chats with messages (sorted)
-                ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
-              ];
-
-console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
-
-    
-        console.log(`Sorted Chats: ${JSON.stringify(sortedChats)}`);
+        const sortedChats = [
+          ...pinnedChatsWithMessages,    // Pinned chats with messages (sorted)
+          ...pinnedChatsWithoutMessages, // Pinned chats without messages
+          ...nonPinnedChatsWithMessages, // Non-pinned chats with messages (sorted)
+          ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
+        ];
     
         if (sortedChats.length === 0) {
           return socket.emit('chatsPaginationResponse', {
@@ -120,7 +110,6 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
     
         // Paginate results
         const paginatedChats = sortedChats.slice(skip, skip + limit);
-        console.log(`Paginated Chats: ${JSON.stringify(paginatedChats)}`);
     
         // Map chat details
         const resultChats = await Promise.all(
@@ -134,10 +123,8 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
               { _id: { $in: otherParticipantIds } },
               { projection: { picture: 1, firstName: 1, lastName: 1 } }
             );
-            console.log(`Other User: ${JSON.stringify(otherUser)}`);
     
             const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
-            console.log(`Last Message: ${JSON.stringify(lastMessage)}`);
     
             let unreadMessagesCount = 0;
             if (chat.messages) {
@@ -149,6 +136,9 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
                 }
               }
             }
+    
+            // Add isMuted flag here
+            const isMuted = mutedChatIds.some((mutedId: any) => mutedId.equals(chat._id));
     
             return {
               chatId: chat.chatId,
@@ -164,6 +154,7 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
               isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
               receiverId: otherParticipantIds.toString(),
               isPinned: pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id)),
+              isMuted, // Add isMuted value here
               messagesDidntReadAmount: unreadMessagesCount,
               recentMessages: chat.messages
                 ? chat.messages.slice(-20).map((message: any) => ({
@@ -181,8 +172,6 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
           })
         );
     
-        console.log(`Result Chats: ${JSON.stringify(resultChats)}`);
-    
         // Emit the response to the socket
         socket.emit('chatsPaginationResponse', {
           success: true,
@@ -199,6 +188,7 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
         socket.emit('chatsPaginationResponse', { success: false });
       }
     });
+    
     
     
     
