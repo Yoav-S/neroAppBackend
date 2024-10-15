@@ -57,11 +57,12 @@ export const socketHandler = (io: Server) => {
     
         // Separate pinned and non-pinned chats
         const pinnedChats = allChats.filter((chat: any) =>
-          pinnedChatIds.includes(chat._id.toString())
+          pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id))
         );
         const nonPinnedChats = allChats.filter((chat: any) =>
-          !pinnedChatIds.includes(chat._id.toString())
+          !pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id))
         );
+        
         console.log(`Pinned Chats: ${JSON.stringify(pinnedChats)}`);
         console.log(`Non-Pinned Chats: ${JSON.stringify(nonPinnedChats)}`);
     
