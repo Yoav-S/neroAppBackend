@@ -446,15 +446,45 @@ export const socketHandler = (io: Server) => {
     
     
     
-    socket.on('deleteChat', async ({ chatId, userId}: { chatId: string; userId: string }) => {
+    socket.on('deleteChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-
-
-        socket.emit('deleteChatResponse');
+        // Convert userId and chatId to ObjectId
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        const chatObjectId = new mongoose.Types.ObjectId(chatId);
+    
+        // Connect to the database
+        const db = getDatabase();
+        const usersCollection = db.collection('users');
+    
+        // Find the user by userId and remove the chat from their chats array
+        const result = await usersCollection.updateOne(
+          { _id: userObjectId },
+          { $pull: { chats: { chatId: chatObjectId } as any } }
+        );
+    
+        // Check if the user was found and updated
+        if (result.modifiedCount === 0) {
+          console.log(`No chat found for user ${userId} with chatId ${chatId}`);
+          return socket.emit('deleteChatResponse', {
+            success: false,
+            message: 'Chat not found or already deleted',
+          });
+        }
+    
+        console.log(`Chat ${chatId} deleted for user ${userId}`);
+        socket.emit('deleteChatResponse', {
+          success: true,
+          message: 'Chat deleted successfully',
+        });
       } catch (error) {
-        socket.emit('error', { message: 'Server error' });
+        console.error("Error in deleteChat:", error);
+        socket.emit('deleteChatResponse', {
+          success: false,
+          message: 'Server error',
+        });
       }
     });
+    
     
     socket.on('pinChat', async ({ chatId, userId }) => {
       try {
