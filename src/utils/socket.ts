@@ -163,7 +163,7 @@ console.log(`Sorted Chats in the New Order: ${JSON.stringify(sortedChats)}`);
               lastMessageStatus: lastMessage?.status || '',
               isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
               receiverId: otherParticipantIds.toString(),
-              isPinned: pinnedChatIds.includes(chat._id),
+              isPinned: pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id)),
               messagesDidntReadAmount: unreadMessagesCount,
               recentMessages: chat.messages
                 ? chat.messages.slice(-20).map((message: any) => ({
