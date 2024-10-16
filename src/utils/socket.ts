@@ -15,7 +15,6 @@ export const socketHandler = (io: Server) => {
     
         // Convert userId to ObjectId
         const userObjectId = new mongoose.Types.ObjectId(userId);
-        console.log(`User ObjectId: ${userObjectId}`);
     
         // Connect to the database
         const db = getDatabase();
@@ -27,7 +26,6 @@ export const socketHandler = (io: Server) => {
           { _id: userObjectId },
           { projection: { chats: 1 } }
         );
-        console.log(`Fetched User: ${JSON.stringify(user)}`);
     
         if (!user || !user.chats) {
           console.log(`No chats found for user ${userId}`);
@@ -51,15 +49,12 @@ export const socketHandler = (io: Server) => {
         const mutedChatIds = user.chats
           .filter((chat: any) => chat.isMuted)
           .map((chat: any) => chat.chatId);
-    
-        console.log(`Pinned Chat IDs: ${pinnedChatIds}`);
-        console.log(`Muted Chat IDs: ${mutedChatIds}`);
-    
+
+   
         // Fetch all chats for the user
         const allChats = await chatsCollection
           .find({ participants: { $in: [userObjectId] } })
           .toArray();
-        console.log(`All Chats for User: ${JSON.stringify(allChats)}`);
     
         // Separate pinned and non-pinned chats
         const pinnedChats = allChats.filter((chat: any) =>
