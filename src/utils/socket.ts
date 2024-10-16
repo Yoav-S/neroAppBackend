@@ -448,55 +448,42 @@ export const socketHandler = (io: Server) => {
     
     socket.on('deleteChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
       try {
-        // Check for missing userId or chatId
-        if (!userId || !chatId) {
-          return socket.emit('deleteChatResponse', {
-            success: false,
-            message: 'Both userId and chatId are required.',
-          });
-        }
+        // Convert userId and chatId to ObjectId if needed
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        
+        // Check if chatId is stored as ObjectId or string
+        // If chatId is stored as ObjectId in the database, keep this. Otherwise, use it as a string.
+        const chatObjectId = mongoose.isValidObjectId(chatId)
+          ? new mongoose.Types.ObjectId(chatId)
+          : chatId; // Use chatId as string if it's not an ObjectId
     
-        // Attempt to find the user by userId
         const db = getDatabase();
         const usersCollection = db.collection('users');
     
-        // Find the user document with the given userId
-        const user = await usersCollection.findOne({ _id: new mongoose.Types.ObjectId(userId) });
+        // Use $pull to remove the chat from the user's chats array
+        const result = await usersCollection.updateOne(
+          { _id: userObjectId },
+          { $pull: { chats: { chatId: chatObjectId } as any } }  // Keep 'as any' to avoid TypeScript issues
+        );
     
-        // Check if user exists
-        if (!user) {
+        if (result.modifiedCount === 0) {
+          console.log(`No chat found for user ${userId} with chatId ${chatId}`);
           return socket.emit('deleteChatResponse', {
             success: false,
-            message: 'User not found.',
+            message: 'Chat not found or already deleted',
           });
         }
-    
-        // Check if the chat exists in the user's chats
-        const chatIndex = user.chats.findIndex((chat: any) => chat.chatId.equals(chatId));
-    
-        if (chatIndex === -1) {
-          return socket.emit('deleteChatResponse', {
-            success: false,
-            message: 'Chat not found in user\'s chats.',
-          });
-        }
-    
-        // Remove the chat from the user's chats array
-        user.chats.splice(chatIndex, 1); // Remove the chat from the array
-    
-        // Update the user document in the database
-        await usersCollection.updateOne({ _id: user._id }, { $set: { chats: user.chats } });
     
         console.log(`Chat ${chatId} deleted for user ${userId}`);
         socket.emit('deleteChatResponse', {
           success: true,
-          message: 'Chat deleted successfully!',
+          message: 'Chat deleted successfully',
         });
       } catch (error) {
         console.error("Error in deleteChat:", error);
         socket.emit('deleteChatResponse', {
           success: false,
-          message: 'Server error occurred.',
+          message: 'Server error',
         });
       }
     });
