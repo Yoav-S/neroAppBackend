@@ -13,21 +13,19 @@ export const socketHandler = (io: Server) => {
         const limit = 7;
         const skip = pageNumber * limit;
     
-        // Convert userId to ObjectId
         const userObjectId = new mongoose.Types.ObjectId(userId);
     
-        // Connect to the database
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
         const usersCollection = db.collection('users');
     
-        // Fetch the user's chat list to check for pinned and muted chats
+        // Fetch the user's chat list
         const user = await usersCollection.findOne(
           { _id: userObjectId },
           { projection: { chats: 1 } }
         );
     
-        if (!user || !user.chats) {
+        if (!user || !user.chats || user.chats.length === 0) {
           console.log(`No chats found for user ${userId}`);
           return socket.emit('chatsPaginationResponse', {
             success: true,
@@ -41,28 +39,24 @@ export const socketHandler = (io: Server) => {
           });
         }
     
-        // Retrieve pinned and muted chat IDs
-        const pinnedChatIds = user.chats
-          .filter((chat: any) => chat.isPinned)
-          .map((chat: any) => chat.chatId);
+        // Get chat IDs and metadata from user's chats array
+        const userChats = user.chats;
+        const userChatIds = userChats.map((chat: any) => new mongoose.Types.ObjectId(chat.chatId));
     
-        const mutedChatIds = user.chats
-          .filter((chat: any) => chat.isMuted)
-          .map((chat: any) => chat.chatId);
-
-   
-        // Fetch all chats for the user
+        // Fetch only the chats that exist in the user's chats array
         const allChats = await chatsCollection
-          .find({ participants: { $in: [userObjectId] } })
+          .find({ _id: { $in: userChatIds } })
           .toArray();
     
+        // Combine chat data with user's chat metadata
+        const combinedChats = allChats.map((chat: any) => {
+          const userChatData = userChats.find((uc: any) => uc.chatId.equals(chat._id));
+          return { ...chat, isPinned: userChatData.isPinned, isMuted: userChatData.isMuted };
+        });
+    
         // Separate pinned and non-pinned chats
-        const pinnedChats = allChats.filter((chat: any) =>
-          pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id))
-        );
-        const nonPinnedChats = allChats.filter((chat: any) =>
-          !pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id))
-        );
+        const pinnedChats = combinedChats.filter((chat: any) => chat.isPinned);
+        const nonPinnedChats = combinedChats.filter((chat: any) => !chat.isPinned);
     
         // Separate chats with and without messages
         const chatsWithMessages = (chats: any[]) =>
@@ -84,24 +78,11 @@ export const socketHandler = (io: Server) => {
     
         // Combine all groups in the desired order
         const sortedChats = [
-          ...pinnedChatsWithMessages,    // Pinned chats with messages (sorted)
-          ...pinnedChatsWithoutMessages, // Pinned chats without messages
-          ...nonPinnedChatsWithMessages, // Non-pinned chats with messages (sorted)
-          ...nonPinnedChatsWithoutMessages, // Non-pinned chats without messages
+          ...pinnedChatsWithMessages,
+          ...pinnedChatsWithoutMessages,
+          ...nonPinnedChatsWithMessages,
+          ...nonPinnedChatsWithoutMessages,
         ];
-    
-        if (sortedChats.length === 0) {
-          return socket.emit('chatsPaginationResponse', {
-            success: true,
-            data: [],
-            pagination: {
-              isMore: false,
-              page: pageNumber,
-              totalPages: 0,
-              totalChats: 0,
-            },
-          });
-        }
     
         // Paginate results
         const paginatedChats = sortedChats.slice(skip, skip + limit);
@@ -132,11 +113,8 @@ export const socketHandler = (io: Server) => {
               }
             }
     
-            // Add isMuted flag here
-            const isMuted = mutedChatIds.some((mutedId: any) => mutedId.equals(chat._id));
-    
             return {
-              chatId: chat.chatId,
+              chatId: chat._id,
               profilePicture: otherUser?.picture || '',
               fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
               lastMessageText: lastMessage?.content || '',
@@ -148,8 +126,8 @@ export const socketHandler = (io: Server) => {
               lastMessageStatus: lastMessage?.status || '',
               isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
               receiverId: otherParticipantIds.toString(),
-              isPinned: pinnedChatIds.some((pinnedId: any) => pinnedId.equals(chat._id)),
-              isMuted, // Add isMuted value here
+              isPinned: chat.isPinned,
+              isMuted: chat.isMuted,
               messagesDidntReadAmount: unreadMessagesCount,
               recentMessages: chat.messages
                 ? chat.messages.slice(-20).map((message: any) => ({
