@@ -441,13 +441,8 @@ export const socketHandler = (io: Server) => {
     
     
     
-    socket.on('deleteChat', async (data: { chatId: string; userId: string }) => {
+    socket.on('deleteChat', async (chatId, userId) => {
       try {
-        // Log the incoming data to ensure chatId and userId are received
-        console.log('Received data:', data);
-    
-        const { chatId, userId } = data; // Destructure the data
-    
         if (!chatId || !userId) {
           console.error('chatId or userId is missing');
           return socket.emit('deleteChatResponse', {
@@ -457,8 +452,8 @@ export const socketHandler = (io: Server) => {
         }
     
         // Convert userId and chatId to ObjectId if needed
-        const userObjectId = new mongoose.Types.ObjectId(userId);
-        const chatObjectId = new mongoose.Types.ObjectId(chatId); // Use as ObjectId
+        const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
+        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId); // Use as ObjectId
     
         const db = getDatabase();
         const usersCollection = db.collection('users');
