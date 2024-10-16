@@ -453,16 +453,25 @@ export const socketHandler = (io: Server) => {
     
         // Convert userId and chatId to ObjectId if needed
         const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
-        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId); // Use as ObjectId
+        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId);
+    
+        console.log('User ObjectId:', userObjectId);
+        console.log('Chat ObjectId:', chatObjectId);
     
         const db = getDatabase();
         const usersCollection = db.collection('users');
     
+        // First, let's fetch the user document and log it
+        const user = await usersCollection.findOne({ _id: userObjectId });
+        console.log('User document:', JSON.stringify(user, null, 2));
+    
         // Use $pull to remove the chat from the user's chats array
         const result = await usersCollection.updateOne(
           { _id: userObjectId },
-          { $pull: { chats: { chatId: chatObjectId } as any } } // Keep 'as any' to avoid TypeScript issues
+          { $pull: { chats: { chatId: chatObjectId } as any } }
         );
+    
+        console.log('Update result:', result);
     
         if (result.modifiedCount === 0) {
           console.log(`No chat found for user ${userId} with chatId ${chatId}`);
