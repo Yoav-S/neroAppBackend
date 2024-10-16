@@ -441,16 +441,24 @@ export const socketHandler = (io: Server) => {
     
     
     
-    socket.on('deleteChat', async ({ chatId, userId }: { chatId: string; userId: string }) => {
+    socket.on('deleteChat', async (data: { chatId: string; userId: string }) => {
       try {
+        // Log the incoming data to ensure chatId and userId are received
+        console.log('Received data:', data);
+    
+        const { chatId, userId } = data; // Destructure the data
+    
+        if (!chatId || !userId) {
+          console.error('chatId or userId is missing');
+          return socket.emit('deleteChatResponse', {
+            success: false,
+            message: 'Invalid chatId or userId',
+          });
+        }
+    
         // Convert userId and chatId to ObjectId if needed
         const userObjectId = new mongoose.Types.ObjectId(userId);
-        
-        // Check if chatId is stored as ObjectId or string
-        // If chatId is stored as ObjectId in the database, keep this. Otherwise, use it as a string.
-        const chatObjectId = mongoose.isValidObjectId(chatId)
-          ? new mongoose.Types.ObjectId(chatId)
-          : chatId; // Use chatId as string if it's not an ObjectId
+        const chatObjectId = new mongoose.Types.ObjectId(chatId); // Use as ObjectId
     
         const db = getDatabase();
         const usersCollection = db.collection('users');
@@ -458,7 +466,7 @@ export const socketHandler = (io: Server) => {
         // Use $pull to remove the chat from the user's chats array
         const result = await usersCollection.updateOne(
           { _id: userObjectId },
-          { $pull: { chats: { chatId: chatObjectId } as any } }  // Keep 'as any' to avoid TypeScript issues
+          { $pull: { chats: { chatId: chatObjectId } as any } } // Keep 'as any' to avoid TypeScript issues
         );
     
         if (result.modifiedCount === 0) {
@@ -482,6 +490,7 @@ export const socketHandler = (io: Server) => {
         });
       }
     });
+    
     
     
     
