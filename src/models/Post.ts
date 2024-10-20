@@ -8,6 +8,8 @@ export interface IPost extends Document {
   userLastName: string;
   postType: 'Lost' | 'Found';
   title: string;
+  city: string;
+  keywords: string[];
   userProfilePicture?: string;
   description: string;
   imagesUrl?: string[];
@@ -33,6 +35,8 @@ const PostSchema: Schema = new Schema({
   updatedAt: { type: Date, default: Date.now },
   userFirstName: { type: String },
   userLastName: { type: String },
+  city: { type: String , required: true },
+  keywords: {type: String },
   userProfilePicture: { type: String },
   postType: { type: String, enum: ['Lost', 'Found'], required: true },
   title: { type: String, required: true },
