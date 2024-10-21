@@ -224,16 +224,16 @@ export const reportPost = async (req: Request, res: Response) => {
 export const createPost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw createAppError( ErrorCode.INVALID_TOKEN);
+    throw createAppError(ErrorCode.INVALID_TOKEN);
   }
 
   try {
-    const { userId, postType, title, description, userFirstName, userLastName, location } = req.body;
+    const { userId, postType, title, description, userFirstName, userLastName, location, city, keywords } = req.body;
     console.log('Request Body:', req.body);
 
     // Check for required fields
-    if (!postType || !title || !description) {
-      return res.status(400).json({ success: false, message: 'postType, title, and description are required fields.' });
+    if (!postType || !title || !description || !city) {
+      return res.status(400).json({ success: false, message: 'postType, title, description, and city are required fields.' });
     }
 
     const images = req.files as Express.Multer.File[];
@@ -246,17 +246,17 @@ export const createPost = async (req: Request, res: Response) => {
     // Create a new Post document
     const newPost: any = {
       userId: mongoose.Types.ObjectId.createFromHexString(userId),
-      userFirstName: userFirstName,
-      userLastName: userLastName,
+      userFirstName,
+      userLastName,
       postType,
       title,
       description,
+      city, // Added city field
+      keywords: keywords || [], // Added keywords field (optional)
       createdAt: new Date(),
       updatedAt: new Date()
     };
     if (location) newPost.location = location;
-
-    // Handle category if provided
 
     // Get user profile picture if available
     if (mongoose.Types.ObjectId.isValid(userId)) {
@@ -310,6 +310,7 @@ export const createPost = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
+
 
 export const getCategories = async (req: Request, res: Response) => {
   
