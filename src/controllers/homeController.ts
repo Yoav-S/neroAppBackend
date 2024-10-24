@@ -243,6 +243,11 @@ export const createPost = async (req: Request, res: Response) => {
     const userCollection = db.collection('users');
     const postsCollection = db.collection('posts');
 
+    // Process keywords: If it's a string, split it into an array
+    const keywordsArray = typeof keywords === 'string'
+      ? keywords.split(',').map((keyword: string) => keyword.trim()) // Split by comma and trim spaces
+      : [];
+
     // Create a new Post document
     const newPost: any = {
       userId: mongoose.Types.ObjectId.createFromHexString(userId),
@@ -252,10 +257,11 @@ export const createPost = async (req: Request, res: Response) => {
       title,
       description,
       city, // Added city field
-      keywords: keywords || [], // Added keywords field (optional)
+      keywords: keywordsArray, // Store keywords as an array of strings
       createdAt: new Date(),
       updatedAt: new Date()
     };
+    
     if (location) newPost.location = location;
 
     // Get user profile picture if available
@@ -310,6 +316,7 @@ export const createPost = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
+
 
 
 export const getCategories = async (req: Request, res: Response) => {
