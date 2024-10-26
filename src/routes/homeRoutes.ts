@@ -3,7 +3,7 @@ import { getFeedPosts, createPost, getCategories, getCities, deletePost, reportP
 import  upload  from '../config/multer';
 const router = express.Router();
 
-router.post('/getFeedPosts', getFeedPosts);
+router.get('/getFeedPosts', getFeedPosts);
 router.get('/getCategories/:pageNumber', getCategories)
 router.get('/getCities/:searchString', getCities);
 router.post('/deletePost', deletePost);
