@@ -6,60 +6,39 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import { ENV } from '../config/env';
-
-import { createFilterQuery } from '../utils/functions';
-export const getPostsPagination = async (req: Request, res: Response) => {
-  
+export const getFeedPosts = async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const postsCollection = db.collection('posts');
-    const categoriesCollection = db.collection('categories');
 
-    // Destructure and provide default values
-    const { pageNumber = 0, filters = null } = req.body;
+    // Calculate the timestamp for the last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const page = parseInt(pageNumber as string, 10) || 0;
-    const limit = 5;
-
-    let filterQuery = {};
-
-    // Only create filter query if filters are not null
-    if (filters !== null) {
-      filterQuery = await createFilterQuery(filters, categoriesCollection);
-    }
-
-    // Get the total number of documents that match the filter
-    const totalPosts = await postsCollection.countDocuments(filterQuery);
-
-    // Calculate the total number of pages
-    const totalPages = Math.ceil(totalPosts / limit);
-
-    // Calculate the number of documents to skip
-    const skip = page * limit;
-
-    // Retrieve posts that match the filter with pagination
-    const postsForCurrentPage = await postsCollection.find(filterQuery)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
+    // Query for "Just published" posts from the last 24 hours, limited to the first 8 posts
+    const justPublishedPosts = await postsCollection
+      .find({ createdAt: { $gte: twentyFourHoursAgo } })  // Filter posts from the last 24 hours
+      .sort({ createdAt: -1 })  // Sort by most recent first
+      .limit(8)  // Limit to 8 posts
       .toArray();
 
+    // Structure the response
+    const feedResponse = [
+      {
+        title: 'Just published',
+        posts: justPublishedPosts,
+      },
+      // More categories to be added later in this structure
+    ];
 
-    const isMore: boolean = (page + 1) * limit < totalPosts;
-
-    // Send the response with the posts and pagination info
+    // Send the response
     res.status(200).json({
       success: true,
-      data: postsForCurrentPage,
-      pagination: {
-        isMore,
-        page,
-        totalPages,
-        totalPosts
-      }
+      message: 'Feed posts retrieved successfully',
+      data: feedResponse,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: "An unexpected error occurred. Please try again." });
+    console.error('Error retrieving feed posts:', error);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
 export const deletePost = async (req: Request, res: Response) => {
