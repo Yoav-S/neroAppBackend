@@ -26,6 +26,9 @@ export const getFeedPosts = async (req: Request, res: Response) => {
     // Retrieve "Technologies" posts based on keywords
     const technologyPosts = await getTechnologyPosts(postsCollection);
 
+    // Retrieve "Pets" posts based on keywords
+    const petPosts = await getPetPosts(postsCollection);
+
     // Structure the response
     const feedResponse = [
       {
@@ -35,6 +38,10 @@ export const getFeedPosts = async (req: Request, res: Response) => {
       {
         title: 'Technologies',
         posts: technologyPosts,
+      },
+      {
+        title: 'Pets',
+        posts: petPosts,
       },
     ];
 
@@ -453,4 +460,25 @@ const getTechnologyPosts = async (postsCollection: any) => {
     .toArray();
 
   return technologyPosts;
+};
+const getPetPosts = async (postsCollection: any) => {
+  const petKeywords = [
+    'Pet', 'Dog', 'Cat', 'Animal', 
+    'Puppy', 'Kitten', 'Bird',
+    'Fish', 'Hamster', 'Rabbit',
+    'Guinea pig', 'Parrot', 'Lizard',
+    'Snake', 'Turtle', 'Ferret'
+  ];
+
+  // Create a regex pattern that matches each keyword as a partial, case-insensitive match
+  const keywordRegex = new RegExp(petKeywords.map(keyword => `${keyword}.*`).join('|'), 'i');
+
+  // Query for posts containing at least one pet-related keyword as a partial match
+  const petPosts = await postsCollection
+    .find({ keywords: { $elemMatch: { $regex: keywordRegex } } })
+    .sort({ createdAt: -1 }) // Sort by most recent first
+    .limit(8) // Limit to 8 posts
+    .toArray();
+
+  return petPosts;
 };
