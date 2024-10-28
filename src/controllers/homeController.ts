@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import { ENV } from '../config/env';
+
+
 export const getFeedPosts = async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
@@ -14,12 +16,15 @@ export const getFeedPosts = async (req: Request, res: Response) => {
     // Calculate the timestamp for the last 24 hours
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // Query for "Just published" posts from the last 24 hours, limited to the first 8 posts
+    // Retrieve "Just published" posts from the last 24 hours, limited to the first 8 posts
     const justPublishedPosts = await postsCollection
-      .find({ createdAt: { $gte: twentyFourHoursAgo } })  // Filter posts from the last 24 hours
-      .sort({ createdAt: -1 })  // Sort by most recent first
-      .limit(8)  // Limit to 8 posts
+      .find({ createdAt: { $gte: twentyFourHoursAgo } })
+      .sort({ createdAt: -1 })
+      .limit(8)
       .toArray();
+
+    // Retrieve "Technologies" posts based on keywords
+    const technologyPosts = await getTechnologyPosts(postsCollection);
 
     // Structure the response
     const feedResponse = [
@@ -27,7 +32,10 @@ export const getFeedPosts = async (req: Request, res: Response) => {
         title: 'Just published',
         posts: justPublishedPosts,
       },
-      // More categories to be added later in this structure
+      {
+        title: 'Technologies',
+        posts: technologyPosts,
+      },
     ];
 
     // Send the response
@@ -41,6 +49,8 @@ export const getFeedPosts = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
+
+
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -429,3 +439,18 @@ export const getCities = async (req: Request, res: Response) => {
 };
 
 
+const getTechnologyPosts = async (postsCollection: any) => {
+  const technologyKeywords = ['iPhone', 'Galaxy', 'AirPods', 'MacBook', 'iPad'];
+
+  // Create a regex pattern that matches each keyword as a partial, case-insensitive match
+  const keywordRegex = new RegExp(technologyKeywords.map(keyword => `${keyword}.*`).join('|'), 'i');
+
+  // Query for posts containing at least one technology-related keyword as a partial match
+  const technologyPosts = await postsCollection
+    .find({ keywords: { $elemMatch: { $regex: keywordRegex } } })
+    .sort({ createdAt: -1 }) // Sort by most recent first
+    .limit(8) // Limit to 8 posts or adjust as needed
+    .toArray();
+
+  return technologyPosts;
+};
