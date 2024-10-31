@@ -58,6 +58,28 @@ export const getFeedPosts = async (req: Request, res: Response) => {
 };
 
 
+
+// Main function to handle the request
+export const getSimilarFeedPosts = async (req: Request, res: Response) => {
+  try {
+    const { keywords, postType } = req.body;
+    const db = getDatabase();
+    const postsCollection = db.collection('posts');
+
+    // Fetch posts with similar keywords and matching postType
+    const similarPosts = await getSimilarPosts(postsCollection, keywords, postType);
+
+    // Send response with posts array
+    res.status(200).json({
+      success: true,
+      message: 'Similar feed posts retrieved successfully',
+      posts: similarPosts,
+    });
+  } catch (error) {
+    console.error('Error retrieving similar feed posts:', error);
+    res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
+  }
+};
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -481,4 +503,19 @@ const getPetPosts = async (postsCollection: any) => {
     .toArray();
 
   return petPosts;
+};
+const getSimilarPosts = async (postsCollection: any, keywords: string[], postType: string) => {
+  // Create a regex pattern for the keywords to allow partial, case-insensitive matches
+  const keywordRegex = new RegExp(keywords.map(keyword => `${keyword}.*`).join('|'), 'i');
+
+  // Query posts with at least one matching keyword and the specified postType
+  const similarPosts = await postsCollection
+    .find({
+      keywords: { $elemMatch: { $regex: keywordRegex } },
+      postType
+    })
+    .sort({ createdAt: -1 }) // Sort by most recent first
+    .toArray();
+
+  return similarPosts;
 };
