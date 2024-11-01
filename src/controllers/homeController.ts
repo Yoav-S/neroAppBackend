@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import { Request, Response } from 'express';
 import { getDatabase } from '../config/database';
 import { AppError, ErrorCode, ErrorType, createAppError, getStatusCodeForErrorType, getUserFriendlyMessage } from '../utils/errors';
@@ -514,15 +515,19 @@ const getSimilarPosts = async (
   // Create a regex pattern for the keywords to allow partial, case-insensitive matches
   const keywordRegex = new RegExp(keywords.map(keyword => `${keyword}.*`).join('|'), 'i');
 
+  // Convert postId to ObjectId to match the MongoDB _id format
+  const excludePostId = new ObjectId(postId);
+
   // Query posts with at least one matching keyword, the specified postType, and excluding the post with postId
   const similarPosts = await postsCollection
     .find({
       keywords: { $elemMatch: { $regex: keywordRegex } },
       postType,
-      _id: { $ne: postId }, // Exclude the post with the provided postId
+      _id: { $ne: excludePostId }, // Exclude the post with the provided postId
     })
     .sort({ createdAt: -1 }) // Sort by most recent first
     .toArray();
 
   return similarPosts;
 };
+
