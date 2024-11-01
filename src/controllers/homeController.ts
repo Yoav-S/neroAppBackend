@@ -62,12 +62,12 @@ export const getFeedPosts = async (req: Request, res: Response) => {
 // Main function to handle the request
 export const getSimilarFeedPosts = async (req: Request, res: Response) => {
   try {
-    const { keywords, postType } = req.body;
+    const { keywords, postType, postId } = req.body;
     const db = getDatabase();
     const postsCollection = db.collection('posts');
 
-    // Fetch posts with similar keywords and matching postType
-    const similarPosts = await getSimilarPosts(postsCollection, keywords, postType);
+    // Fetch posts with similar keywords and matching postType, excluding the one with postId
+    const similarPosts = await getSimilarPosts(postsCollection, keywords, postType, postId);
 
     // Send response with posts array
     res.status(200).json({
@@ -80,6 +80,7 @@ export const getSimilarFeedPosts = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'An unexpected error occurred.' });
   }
 };
+
 export const deletePost = async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -504,15 +505,21 @@ const getPetPosts = async (postsCollection: any) => {
 
   return petPosts;
 };
-const getSimilarPosts = async (postsCollection: any, keywords: string[], postType: string) => {
+const getSimilarPosts = async (
+  postsCollection: any,
+  keywords: string[],
+  postType: string,
+  postId: string
+) => {
   // Create a regex pattern for the keywords to allow partial, case-insensitive matches
   const keywordRegex = new RegExp(keywords.map(keyword => `${keyword}.*`).join('|'), 'i');
 
-  // Query posts with at least one matching keyword and the specified postType
+  // Query posts with at least one matching keyword, the specified postType, and excluding the post with postId
   const similarPosts = await postsCollection
     .find({
       keywords: { $elemMatch: { $regex: keywordRegex } },
-      postType
+      postType,
+      _id: { $ne: postId }, // Exclude the post with the provided postId
     })
     .sort({ createdAt: -1 }) // Sort by most recent first
     .toArray();
