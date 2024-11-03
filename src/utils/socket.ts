@@ -187,10 +187,22 @@ export const socketHandler = (io: Server) => {
         if (existingChat) {
           console.log('Chat already exists with ID:', existingChat._id);
           socket.emit('chatCreated', { success: true, chatId: existingChat._id });
+    
+          // Ensure both users have the chat in their chats array in the users collection
+          await usersCollection.updateOne(
+            { userId: senderId, "chats.chatId": { $ne: existingChat._id } },
+            { $push: { chats: { chatId: existingChat._id, isPinned: false, isMuted: false } as any} }
+          );
+    
+          await usersCollection.updateOne(
+            { userId: recieverId, "chats.chatId": { $ne: existingChat._id } },
+            { $push: { chats: { chatId: existingChat._id, isPinned: false, isMuted: false } as any } }
+          );
+    
           return;
         }
     
-        // Create a new chat with `chatId` matching `_id`
+        // If no chat exists, create a new chat document
         const chatObjectId = new mongoose.Types.ObjectId();
         const newChat = {
           _id: chatObjectId,
@@ -215,19 +227,16 @@ export const socketHandler = (io: Server) => {
         if (result.insertedId) {
           console.log('New chat created with ID:', result.insertedId);
     
-          // Update the `chats` array in each user's document
-          const updateSenderResult = await usersCollection.updateOne(
+          // Add the new chat to the `chats` array for both users in the users collection
+          await usersCollection.updateOne(
             { userId: senderId },
             { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
           );
     
-          const updateReceiverResult = await usersCollection.updateOne(
+          await usersCollection.updateOne(
             { userId: recieverId },
             { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
           );
-    
-          console.log('Update sender result:', updateSenderResult);
-          console.log('Update receiver result:', updateReceiverResult);
     
           // Emit a successful chat creation event
           socket.emit('chatCreated', { success: true, chatId: result.insertedId });
@@ -240,6 +249,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatCreated', { success: false });
       }
     });
+    
     
     
     
