@@ -164,17 +164,28 @@ export const socketHandler = (io: Server) => {
     
     socket.on('createChatAttempt', async ({ senderId, recieverId }: { senderId: string; recieverId: string }) => {
       try {
+        console.log('createChatAttempt called with:', { senderId, recieverId });
+    
         const db = getDatabase();
-        const chatsCollection = db.collection('Chats'); // Use the Chats collection
-        const usersCollection = db.collection('users'); // Use the Users collection
+        const chatsCollection = db.collection('Chats');
+        const usersCollection = db.collection('users');
+    
+        console.log('Connected to database and collections');
     
         // Check if a chat with these participants already exists
         const existingChat = await chatsCollection.findOne({
-          participants: { $all: [mongoose.Types.ObjectId.createFromHexString(senderId), mongoose.Types.ObjectId.createFromHexString(recieverId)] }
+          participants: {
+            $all: [
+              mongoose.Types.ObjectId.createFromHexString(senderId),
+              mongoose.Types.ObjectId.createFromHexString(recieverId),
+            ]
+          }
         });
     
+        console.log('Existing chat search result:', existingChat);
+    
         if (existingChat) {
-          // If chat exists, emit success response
+          console.log('Chat already exists with ID:', existingChat._id);
           socket.emit('chatCreated', { success: true, chatId: existingChat._id });
           return;
         }
@@ -182,28 +193,42 @@ export const socketHandler = (io: Server) => {
         // If no chat exists, create a new chat
         const newChat = {
           chatId: new mongoose.Types.ObjectId().toHexString(),
-          participants: [mongoose.Types.ObjectId.createFromHexString(senderId), mongoose.Types.ObjectId.createFromHexString(recieverId)],
+          participants: [
+            mongoose.Types.ObjectId.createFromHexString(senderId),
+            mongoose.Types.ObjectId.createFromHexString(recieverId),
+          ],
           messages: [],
           createdAt: new Date(),
           updatedAt: new Date(),
         };
     
+        console.log('Creating new chat with data:', newChat);
+    
         const result = await chatsCollection.insertOne(newChat);
     
+        console.log('Chat insertion result:', result);
+    
         if (result.insertedId) {
+          console.log('New chat created with ID:', result.insertedId);
+    
           // Update the `chats` array in each user's document
-          await usersCollection.updateOne(
+          const updateSenderResult = await usersCollection.updateOne(
             { userId: senderId },
             { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
           );
-          await usersCollection.updateOne(
+    
+          const updateReceiverResult = await usersCollection.updateOne(
             { userId: recieverId },
             { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
           );
     
+          console.log('Update sender result:', updateSenderResult);
+          console.log('Update receiver result:', updateReceiverResult);
+    
           // Emit a successful chat creation event
           socket.emit('chatCreated', { success: true, chatId: result.insertedId });
         } else {
+          console.error('Failed to insert new chat');
           throw new Error('Failed to create chat');
         }
       } catch (error) {
@@ -211,6 +236,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatCreated', { success: false });
       }
     });
+    
     
 
     
