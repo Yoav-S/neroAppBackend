@@ -190,18 +190,20 @@ export const socketHandler = (io: Server) => {
           return;
         }
     
-        // If no chat exists, create a new chat
+        // Create a new chat with `chatId` matching `_id`
+        const chatObjectId = new mongoose.Types.ObjectId();
         const newChat = {
-          chatId: new mongoose.Types.ObjectId().toHexString(),
+          _id: chatObjectId,
+          chatId: chatObjectId.toHexString(),
           participants: [
             mongoose.Types.ObjectId.createFromHexString(senderId),
             mongoose.Types.ObjectId.createFromHexString(recieverId),
           ],
-          messages: [],
-          lastMessageContent: "", // Initialize lastMessageContent
-          lastMessageDate: null,  // Initialize lastMessageDate
           createdAt: new Date(),
           updatedAt: new Date(),
+          lastMessageContent: "", // Initialize lastMessageContent
+          lastMessageDate: null,  // Initialize lastMessageDate
+          messages: [],
         };
     
         console.log('Creating new chat with data:', newChat);
@@ -238,6 +240,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatCreated', { success: false });
       }
     });
+    
     
     
     
