@@ -83,75 +83,97 @@ export const getSimilarFeedPosts = async (req: Request, res: Response) => {
 };
 
 export const deletePost = async (req: Request, res: Response) => {
+  console.log('Received request to delete post'); // Initial log to confirm function execution
+
   const authHeader = req.headers.authorization;
+  console.log('Authorization Header:', authHeader); // Log the Authorization header
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw createAppError( ErrorCode.INVALID_TOKEN);
+    console.log('Authorization header missing or invalid'); // Log missing/invalid header
+    throw createAppError(ErrorCode.INVALID_TOKEN);
   }
+
   try {
-    // Validate Bearer token
-
-
+    // Extract and verify the token
     const token = authHeader.split(' ')[1];
+    console.log('Extracted Token:', token); // Log the extracted token
+
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-    
+    console.log('Decoded Token User ID:', decodedToken.userId); // Log decoded user ID from token
+
     const { postId } = req.body;
+    console.log('Request Body postId:', postId); // Log the postId from the request body
+
     const userId = decodedToken.userId;
 
     if (!mongoose.Types.ObjectId.isValid(postId)) {
+      console.log('Invalid postId format'); // Log if postId is invalid
       throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
     const db = getDatabase();
     const postsCollection = db.collection('posts');
 
-    // Find the post by ID
+    // Attempt to find the post by ID
     const post = await postsCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
+    console.log('Post found in database:', post); // Log the post if found
 
     if (!post) {
+      console.log('Post not found'); // Log if post not found
       throw createAppError(ErrorCode.RECORD_NOT_FOUND);
     }
 
-    // Validate if the user has permission to delete the post
+    // Check if the user has permission to delete the post
     if (post.userId.toString() !== userId) {
+      console.log('User does not have permission to delete this post'); // Log permission check failure
       throw createAppError(ErrorCode.INSUFFICIENT_PERMISSIONS);
     }
 
-    // Delete associated images from Firebase Storage
+    // Attempt to delete associated images from Firebase Storage
     if (post.imagesUrl && post.imagesUrl.length > 0) {
+      console.log('Deleting associated images from Firebase Storage'); // Log image deletion attempt
+
       for (const imageUrl of post.imagesUrl) {
         const filePath = imageUrl.replace(`https://storage.googleapis.com/${bucket.name}/`, '');
         const file = bucket.file(filePath);
 
         try {
           await file.delete();
+          console.log(`Deleted image: ${imageUrl}`); // Log successful image deletion
         } catch (error) {
-          console.error(`Failed to delete image: ${imageUrl}`, error);
-          // Consider whether this should throw an error or just log it
+          console.error(`Failed to delete image: ${imageUrl}`, error); // Log failed image deletion
         }
       }
     }
 
-    // Delete the post from the collection
+    // Attempt to delete the post from the database
     const deleteResult = await postsCollection.deleteOne({ _id: mongoose.Types.ObjectId.createFromHexString(postId) });
+    console.log('Delete Result:', deleteResult); // Log delete result
 
     if (deleteResult.deletedCount === 0) {
+      console.log('Post deletion failed'); // Log if no documents were deleted
       throw createAppError(ErrorCode.DATABASE_QUERY_ERROR);
     }
 
+    console.log('Post deleted successfully'); // Log successful deletion
     res.status(200).json({ success: true, message: 'Post deleted successfully.' });
   } catch (error: any) {
+    // Additional logging for different types of errors
+    console.error('Error deleting post:', error);
+
     if (error instanceof AppError) {
       return res.status(getStatusCodeForErrorType(error.type)).json({
         success: false,
         message: error.userMessage,
       });
     } else if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      console.log('JWT Error:', error.message); // Log JWT errors specifically
       return res.status(403).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.AUTHENTICATION),
       });
     } else {
-      console.error('Error deleting post:', error);
+      console.log('Internal server error:', error.message); // Log unexpected errors
       return res.status(500).json({
         success: false,
         message: getUserFriendlyMessage(ErrorType.INTERNAL_SERVER_ERROR),
@@ -159,6 +181,7 @@ export const deletePost = async (req: Request, res: Response) => {
     }
   }
 };
+
 
 
 export const reportPost = async (req: Request, res: Response) => {
