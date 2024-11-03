@@ -162,8 +162,55 @@ export const socketHandler = (io: Server) => {
       }
     });
     
+    socket.on('createChatAttempt', async ({ senderId, recieverId }: { senderId: string; recieverId: string }) => {
+      try {
+        const db = getDatabase();
+        const chatsCollection = db.collection('Chats'); // Use the Chats collection
+        const usersCollection = db.collection('users'); // Use the Users collection
     
+        // Check if a chat with these participants already exists
+        const existingChat = await chatsCollection.findOne({
+          participants: { $all: [mongoose.Types.ObjectId.createFromHexString(senderId), mongoose.Types.ObjectId.createFromHexString(recieverId)] }
+        });
     
+        if (existingChat) {
+          // If chat exists, emit success response
+          socket.emit('chatCreated', { success: true, chatId: existingChat._id });
+          return;
+        }
+    
+        // If no chat exists, create a new chat
+        const newChat = {
+          chatId: new mongoose.Types.ObjectId().toHexString(),
+          participants: [mongoose.Types.ObjectId.createFromHexString(senderId), mongoose.Types.ObjectId.createFromHexString(recieverId)],
+          messages: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+    
+        const result = await chatsCollection.insertOne(newChat);
+    
+        if (result.insertedId) {
+          // Update the `chats` array in each user's document
+          await usersCollection.updateOne(
+            { userId: senderId },
+            { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
+          );
+          await usersCollection.updateOne(
+            { userId: recieverId },
+            { $push: { chats: { chatId: result.insertedId, isPinned: false, isMuted: false } as any } }
+          );
+    
+          // Emit a successful chat creation event
+          socket.emit('chatCreated', { success: true, chatId: result.insertedId });
+        } else {
+          throw new Error('Failed to create chat');
+        }
+      } catch (error) {
+        console.error('Error in createChatAttempt:', error);
+        socket.emit('chatCreated', { success: false });
+      }
+    });
     
 
     
