@@ -162,7 +162,7 @@ export const socketHandler = (io: Server) => {
       }
     });
     
-    socket.on('createChatAttempt', async ({ senderId, recieverId }: { senderId: string; recieverId: string }) => {
+    socket.on('createChatAttempt', async ({ senderId, recieverId }) => {
       try {
         console.log('createChatAttempt called with:', { senderId, recieverId });
     
