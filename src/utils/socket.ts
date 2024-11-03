@@ -336,7 +336,8 @@ export const socketHandler = (io: Server) => {
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
-        const chatsCollection = db.collection('Chats'); // Use the Chats collection now
+        const chatsCollection = db.collection('Chats');
+        const usersCollection = db.collection('users');
     
         let messageText = '';
         let sender = '';
@@ -361,16 +362,16 @@ export const socketHandler = (io: Server) => {
         }
     
         let newMessages: any[] = [];
-        let lastMessageContent = messageText; // Default to the text content
-        let lastMessageDate = new Date(); // Current timestamp
+        let lastMessageContent = messageText;
+        let lastMessageDate = new Date();
     
-        // Handle text-only messages (no images provided)
+        // Handle text-only messages
         if (messageText && images.length === 0) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
             senderId: mongoose.Types.ObjectId.createFromHexString(sender),
             content: messageText,
-            imageUrl: null, // No image
+            imageUrl: null,
             timestamp: lastMessageDate,
             status: 'Delivered',
             isEdited: false,
@@ -378,7 +379,7 @@ export const socketHandler = (io: Server) => {
           newMessages.push(textMessage);
         }
     
-        // Process image files if they exist
+        // Process image messages
         for (const [index, image] of images.entries()) {
           const uniqueFilename = `Chats/${chatId}/${image.name}`;
           const file = bucket.file(uniqueFilename);
@@ -388,9 +389,7 @@ export const socketHandler = (io: Server) => {
             const fileBuffer = Buffer.from(base64Data, 'base64');
     
             await file.save(fileBuffer, {
-              metadata: {
-                contentType: image.type,
-              },
+              metadata: { contentType: image.type },
               public: true,
             });
     
@@ -399,7 +398,7 @@ export const socketHandler = (io: Server) => {
             const imageMessage = {
               messageId: new mongoose.Types.ObjectId(),
               senderId: mongoose.Types.ObjectId.createFromHexString(sender),
-              content: index === 0 ? messageText || '' : '', // Add text only with the first image
+              content: index === 0 ? messageText || '' : '',
               imageUrl,
               timestamp: new Date(),
               status: 'Delivered',
@@ -407,33 +406,48 @@ export const socketHandler = (io: Server) => {
             };
     
             newMessages.push(imageMessage);
-            lastMessageContent = imageUrl; // If an image exists, update lastMessageContent with image URL
-            lastMessageDate = imageMessage.timestamp; // Set lastMessageDate to the timestamp of the image message
+            lastMessageContent = imageUrl;
+            lastMessageDate = imageMessage.timestamp;
           } catch (error) {
             console.error('Error saving image:', error);
-            continue; // Skip this image if there's an error
+            continue;
           }
         }
     
-        // If no messages were created, throw an error
         if (newMessages.length === 0) {
           throw new Error('No valid messages to send');
         }
     
-        // Save the messages to the chat's messages array in the Chats collection
+        // Update messages and lastMessage fields in the Chats collection
         const result = await chatsCollection.updateOne(
-          { _id: mongoose.Types.ObjectId.createFromHexString(chatId) }, // Find the chat by chatId
+          { _id: mongoose.Types.ObjectId.createFromHexString(chatId) },
           {
-            $push: { messages: { $each: newMessages } as any }, // Push new messages into the messages array
-            $set: { 
-              lastMessageContent, // Update lastMessageContent
-              lastMessageDate, // Update lastMessageDate
-            }
+            $push: { messages: { $each: newMessages } as any },
+            $set: { lastMessageContent, lastMessageDate },
           }
         );
     
         if (result.modifiedCount === 0) {
           throw new Error('Failed to send message');
+        }
+    
+        // Find the chat and get the receiver's ID (the non-sender ID in participants)
+        const chat = await chatsCollection.findOne({ _id: mongoose.Types.ObjectId.createFromHexString(chatId) });
+        if (!chat) throw new Error('Chat not found');
+        
+        const receiverId = chat.participants.find((id: any) => !id.equals(sender));
+        if (!receiverId) throw new Error('Receiver ID not found');
+    
+        // Check if receiver already has this chat in their chats array
+        const receiver = await usersCollection.findOne({ userId: receiverId });
+        const hasChat = receiver?.chats.some((chat: any) => chat.chatId.equals(chatId));
+    
+        // If receiver does not have the chat, add it
+        if (!hasChat) {
+          await usersCollection.updateOne(
+            { userId: receiverId },
+            { $push: { chats: { chatId: mongoose.Types.ObjectId.createFromHexString(chatId), isPinned: false, isMuted: false } as any } }
+          );
         }
     
         // Broadcast the message to the chat room
@@ -447,6 +461,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
