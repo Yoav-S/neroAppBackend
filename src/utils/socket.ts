@@ -198,6 +198,8 @@ export const socketHandler = (io: Server) => {
             mongoose.Types.ObjectId.createFromHexString(recieverId),
           ],
           messages: [],
+          lastMessageContent: "", // Initialize lastMessageContent
+          lastMessageDate: null,  // Initialize lastMessageDate
           createdAt: new Date(),
           updatedAt: new Date(),
         };
@@ -236,6 +238,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('chatCreated', { success: false });
       }
     });
+    
     
     
 
