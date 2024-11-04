@@ -168,8 +168,9 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
+        const usersCollection = db.collection('Users');
     
-        // Convert `senderId` and `receiverId` to MongoDB ObjectId instances
+        // Convert `senderId` and `recieverId` to MongoDB ObjectId instances
         const senderObjectId = new mongoose.Types.ObjectId(senderId);
         const receiverObjectId = new mongoose.Types.ObjectId(recieverId);
     
@@ -179,15 +180,25 @@ export const socketHandler = (io: Server) => {
         });
     
         if (existingChat) {
-          // Chat exists, return success
-          socket.emit('createChatResponse', { success: true });
+          // If chat exists, retrieve receiver details and return them
+          const receiver = await usersCollection.findOne({ _id: receiverObjectId });
+          if (receiver) {
+            socket.emit('createChatResponse', {
+              success: true,
+              chatId: existingChat.chatId,
+              receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
+              receiverPicture: receiver.picture
+            });
+          } else {
+            socket.emit('createChatResponse', { success: false });
+          }
           return;
         }
     
         // Generate a unique chatId
         const chatId = new mongoose.Types.ObjectId().toHexString();
     
-        // Create a new chat document with the generated chatId
+        // Create a new chat document
         const newChat = {
           chatId: chatId,
           participants: [senderObjectId, receiverObjectId],
@@ -203,7 +214,18 @@ export const socketHandler = (io: Server) => {
     
         // Check if the insertion was successful
         if (insertResult.insertedId) {
-          socket.emit('createChatResponse', { success: true });
+          // Retrieve receiver's profile details
+          const receiver = await usersCollection.findOne({ _id: receiverObjectId });
+          if (receiver) {
+            socket.emit('createChatResponse', {
+              success: true,
+              chatId: chatId,
+              receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
+              receiverPicture: receiver.picture
+            });
+          } else {
+            socket.emit('createChatResponse', { success: false });
+          }
         } else {
           socket.emit('createChatResponse', { success: false });
         }
@@ -212,6 +234,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('createChatResponse', { success: false });
       }
     });
+    
     
 
     
