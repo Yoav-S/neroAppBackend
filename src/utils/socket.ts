@@ -167,45 +167,49 @@ export const socketHandler = (io: Server) => {
     socket.on('createChatAttempt', async ({ senderId, recieverId }: { senderId: string; recieverId: string }) => {
       try {
         const db = getDatabase();
-        const chatsCollection = db.collection('Chats'); // Access the Chats collection
+        const chatsCollection = db.collection('Chats');
     
         // Convert `senderId` and `receiverId` to MongoDB ObjectId instances
         const senderObjectId = new mongoose.Types.ObjectId(senderId);
         const receiverObjectId = new mongoose.Types.ObjectId(recieverId);
     
-        // Step 1: Check if a chat already exists between these participants
+        // Check if a chat already exists between these two participants
         const existingChat = await chatsCollection.findOne({
           participants: { $all: [senderObjectId, receiverObjectId] }
         });
     
         if (existingChat) {
-          // Chat already exists, so we return success
+          // Chat exists, return success
           socket.emit('createChatResponse', { success: true });
           return;
         }
     
-        // Step 2: Create a new chat document if it doesn't exist
+        // Generate a unique chatId
         const chatId = new mongoose.Types.ObjectId().toHexString();
+    
+        // Create a new chat document with the generated chatId
         const newChat = {
-          chatId,
+          chatId: chatId,
           participants: [senderObjectId, receiverObjectId],
           createdAt: new Date(),
           updatedAt: new Date(),
+          lastMessageContent: "",
+          lastMessageDate: null,
           messages: []
         };
     
         // Insert the new chat document
         const insertResult = await chatsCollection.insertOne(newChat);
     
-        // Step 3: Check if the insertion was successful and return the result
+        // Check if the insertion was successful
         if (insertResult.insertedId) {
-          socket.emit('createChatResponse', { success: true, chatId });
+          socket.emit('createChatResponse', { success: true });
         } else {
           socket.emit('createChatResponse', { success: false });
         }
       } catch (error) {
         console.error('Error in createChatAttempt:', error);
-        socket.emit('error', { message: 'Error creating chat' });
+        socket.emit('createChatResponse', { success: false });
       }
     });
     
