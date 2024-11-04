@@ -168,7 +168,7 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
-        const usersCollection = db.collection('Users');
+        const usersCollection = db.collection('users');
     
         // Convert `senderId` and `recieverId` to MongoDB ObjectId instances
         const senderObjectId = new mongoose.Types.ObjectId(senderId);
@@ -189,8 +189,6 @@ export const socketHandler = (io: Server) => {
               receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
               receiverPicture: receiver.picture
             });
-          } else {
-            socket.emit('createChatResponse', { success: false });
           }
           return;
         }
