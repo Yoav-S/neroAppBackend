@@ -193,12 +193,13 @@ export const socketHandler = (io: Server) => {
           return;
         }
     
-        // Generate a unique chatId
-        const chatId = new mongoose.Types.ObjectId().toHexString();
+        // Generate a unique ObjectId to be used for both _id and chatId
+        const chatObjectId = new mongoose.Types.ObjectId();
     
         // Create a new chat document
         const newChat = {
-          chatId: chatId,
+          _id: chatObjectId,
+          chatId: chatObjectId.toHexString(),
           participants: [senderObjectId, receiverObjectId],
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -217,7 +218,7 @@ export const socketHandler = (io: Server) => {
           if (receiver) {
             socket.emit('createChatResponse', {
               success: true,
-              chatId: chatId,
+              chatId: chatObjectId.toHexString(),
               receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
               receiverPicture: receiver.picture
             });
@@ -232,6 +233,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('createChatResponse', { success: false });
       }
     });
+    
     
     
 
