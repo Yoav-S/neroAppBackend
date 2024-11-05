@@ -327,7 +327,7 @@ export const socketHandler = (io: Server) => {
       try {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
-        const usersCollection = db.collection('Users');
+        const usersCollection = db.collection('users');
     
         let messageText = '';
         let sender = '';
@@ -365,23 +365,29 @@ export const socketHandler = (io: Server) => {
     
         const participantIds = chat.participants;
     
-        // Update users' active chats if not already present
-        for (const participantId of participantIds) {
+        // Identify the receiver
+        const receiverId = participantIds.find(
+          (id: mongoose.Types.ObjectId) => !id.equals(senderObjectId)
+        );
+        if (!receiverId) throw new Error('Receiver not found');
+    
+        // Check and add chat for both sender and receiver if necessary
+        for (const participantId of [senderObjectId, receiverId]) {
           const user = await usersCollection.findOne({ _id: participantId });
           if (!user) continue;
     
-          const isChatActive = user.chats.some((chat : any) => chat.chatId.equals(chatObjectId));
+          const isChatActive = user.chats.some((chat: any) => chat.chatId.equals(chatObjectId));
           if (!isChatActive) {
             await usersCollection.updateOne(
               { _id: participantId },
-              { 
-                $push: { 
-                  chats: { 
-                    chatId: chatObjectId, 
-                    isPinned: false, 
-                    isMuted: false 
-                  } 
-                } as any 
+              {
+                $push: {
+                  chats: {
+                    chatId: chatObjectId,
+                    isPinned: false,
+                    isMuted: false,
+                  },
+                } as any,
               }
             );
           }
@@ -448,10 +454,10 @@ export const socketHandler = (io: Server) => {
           { _id: chatObjectId },
           {
             $push: { messages: { $each: newMessages } as any },
-            $set: { 
+            $set: {
               lastMessageContent,
               lastMessageDate,
-            }
+            },
           }
         );
     
@@ -470,6 +476,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
+    
     
     
     
