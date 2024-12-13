@@ -249,30 +249,81 @@ export const socketHandler = (io: Server) => {
           return;
         }
     
+        const pageSize = 10;
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
     
-        // Find the chat that matches both participants
-        const chat = await chatsCollection.findOne({
-          participants: {
-            $all: [
+        const pipeline = [
+          {
+            $match: {
+              participants: {
+                $all: [
+                  mongoose.Types.ObjectId.createFromHexString(publisherId),
+                  mongoose.Types.ObjectId.createFromHexString(userId)
+                ]
+              }
+            }
+          },
+          { $unwind: '$messages' },
+          { $sort: { 'messages.timestamp': -1 } },
+          { $limit: pageSize },
+          {
+            $project: {
+              chatId: 1,
+              messageId: '$messages.messageId',
+              sender: '$messages.sender',
+              messageText: '$messages.content',
+              formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
+              status: '$messages.status',
+              image: '$messages.imageUrl',
+              timestamp: '$messages.timestamp',
+              isEdited: '$messages.isEdited'
+            }
+          }
+        ];
+    
+        const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+    
+        if (chatMessages.length === 0) {
+          await chatsCollection.insertOne({
+            chatId: new mongoose.Types.ObjectId().toHexString(),
+            participants: [
               mongoose.Types.ObjectId.createFromHexString(publisherId),
               mongoose.Types.ObjectId.createFromHexString(userId)
-            ]
-          }
-        });
+            ],
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
     
-        // Return the chat in the same format as the chat list structure
+        const formattedMessages = chatMessages.map(message => ({
+          messageId: message.messageId,
+          sender: message.sender,
+          messageText: message.messageText,
+          formattedTime: message.formattedTime,
+          status: message.status,
+          image: message.image,
+          timestamp: message.timestamp,
+          isEdited: message.isEdited
+        }));
+    
         const response = {
-          chatId: chat?.chatId || new mongoose.Types.ObjectId().toHexString(),
-          recentMessages: chat?.messages?.slice(-10).reverse() || []
+          success: true,
+          data: formattedMessages,
+          pagination: {
+            isMore: false,
+            page: 1,
+            totalPages: 1,
+            totalItems: formattedMessages.length
+          }
         };
     
-        socket.emit('chatMessagesByIdResponse', [true, response]);
+        socket.emit('chatMessagesByIdResponse', response);
     
       } catch (error) {
         console.error('Error fetching chat messages:', error);
-        socket.emit('chatMessagesByIdResponse', [false, null]);
+        socket.emit('error', { message: 'Server error' });
       }
     });
     
