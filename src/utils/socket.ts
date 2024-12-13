@@ -310,6 +310,7 @@ export const socketHandler = (io: Server) => {
     
         const response = {
           success: true,
+          chatId: chatMessages[0]?.chatId, // or use the chatId from the first message
           data: formattedMessages,
           pagination: {
             isMore: false,
@@ -318,6 +319,8 @@ export const socketHandler = (io: Server) => {
             totalItems: formattedMessages.length
           }
         };
+        
+        socket.emit('chatMessagesByIdResponse', response);
     
         socket.emit('chatMessagesByIdResponse', response);
     
