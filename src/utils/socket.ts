@@ -241,48 +241,48 @@ export const socketHandler = (io: Server) => {
     
     socket.on('getChatMessagesById', async ({ publisherId, userId }: { publisherId: string; userId?: string }) => {
       try {
-        // If userId is not provided, use a default value or handle accordingly
         if (!userId) {
-          socket.emit('chatMessagesByIdResponse', { 
-            success: false, 
-            message: 'User ID is required' 
+          socket.emit('chatMessagesByIdResponse', {
+            success: false,
+            message: 'User ID is required'
           });
           return;
         }
     
-        const pageSize = 10; // Retrieving last 10 messages
-    
+        const pageSize = 10;
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
     
-        // Find a chat where both participants exist
         const pipeline = [
-          { 
-            $match: { 
-              participants: { 
+          {
+            $match: {
+              participants: {
                 $all: [
-                  mongoose.Types.ObjectId.createFromHexString(publisherId), 
+                  mongoose.Types.ObjectId.createFromHexString(publisherId),
                   mongoose.Types.ObjectId.createFromHexString(userId)
-                ] 
-              } 
-            } 
-          },
-          { 
-            $project: { 
-              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] } 
-            } 
-          },
-          { $unwind: '$messages' },
-          { 
-            $lookup: { 
-              from: 'users', 
-              localField: 'messages.senderId', 
-              foreignField: '_id', 
-              as: 'senderInfo' 
-            } 
+                ]
+              }
+            }
           },
           {
             $project: {
+              _id: 0, // Exclude MongoDB's internal _id
+              chatId: '$chatId', // Correctly extract the chatId
+              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] }
+            }
+          },
+          { $unwind: '$messages' },
+          {
+            $lookup: {
+              from: 'users',
+              localField: 'messages.senderId',
+              foreignField: '_id',
+              as: 'senderInfo'
+            }
+          },
+          {
+            $project: {
+              chatId: 1,
               messageId: '$messages.messageId',
               sender: { $arrayElemAt: ['$senderInfo._id', 0] },
               messageText: '$messages.content',
@@ -295,11 +295,12 @@ export const socketHandler = (io: Server) => {
           }
         ];
     
-        const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+        const chatMessagesWithId = await chatsCollection.aggregate(pipeline).toArray();
     
         // If no chat found, create a new chat
-        if (chatMessages.length === 0) {
+        if (chatMessagesWithId.length === 0) {
           const newChat = await chatsCollection.insertOne({
+            chatId: new mongoose.Types.ObjectId().toHexString(), // Generate a new chatId
             participants: [
               mongoose.Types.ObjectId.createFromHexString(publisherId),
               mongoose.Types.ObjectId.createFromHexString(userId)
@@ -310,8 +311,9 @@ export const socketHandler = (io: Server) => {
           });
         }
     
-        // Format the response similar to the previous implementation
-        const formattedChatMessages = chatMessages.map((message) => ({
+        // Format the response
+        const formattedChatMessages = chatMessagesWithId.map((message) => ({
+          chatId: message.chatId, // Now correctly using the chatId from the document
           messageId: message.messageId,
           sender: message.sender,
           messageText: message.messageText,
@@ -326,7 +328,7 @@ export const socketHandler = (io: Server) => {
           success: true,
           data: formattedChatMessages,
           pagination: {
-            isMore: false, // Since we're only fetching the last 10 messages
+            isMore: false,
             page: 1,
             totalPages: 1,
             totalItems: formattedChatMessages.length
