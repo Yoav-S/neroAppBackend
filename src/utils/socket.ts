@@ -310,6 +310,7 @@ export const socketHandler = (io: Server) => {
     
         const response = {
           success: true,
+          chatId: chatMessages[0]?.chatId, // Add this back
           data: formattedMessages,
           pagination: {
             isMore: false,
