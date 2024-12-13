@@ -249,13 +249,11 @@ export const socketHandler = (io: Server) => {
           return;
         }
     
-        const pageSize = 10;
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
-        const usersCollection = db.collection('Users');
     
         // Find the chat that matches both participants
-        let chat = await chatsCollection.findOne({
+        const chat = await chatsCollection.findOne({
           participants: {
             $all: [
               mongoose.Types.ObjectId.createFromHexString(publisherId),
@@ -264,66 +262,17 @@ export const socketHandler = (io: Server) => {
           }
         });
     
-        // Fetch receiver user info
-        const receiverUser = await usersCollection.findOne({
-          _id: mongoose.Types.ObjectId.createFromHexString(publisherId)
-        });
-    
-        // If no chat found, create a new one
-        if (!chat) {
-          const newChatId = new mongoose.Types.ObjectId().toHexString();
-          const result = await chatsCollection.insertOne({
-            _id: new mongoose.Types.ObjectId(),
-            chatId: newChatId,
-            participants: [
-              mongoose.Types.ObjectId.createFromHexString(publisherId),
-              mongoose.Types.ObjectId.createFromHexString(userId)
-            ],
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-          
-          chat = await chatsCollection.findOne({ _id: result.insertedId });
-        }
-    
-        if (!chat) {
-          throw new Error('Failed to create or retrieve chat');
-        }
-    
-        // Get the last message if messages exist
-        const messages = chat.messages || [];
-        const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-    
-        // Prepare the response
+        // Return the chat in the same format as the chat list structure
         const response = {
-          success: true,
-          chatId: chat.chatId,
-          fullName: receiverUser?.fullName || '',
-          isLastMessageIsImage: lastMessage ? !!lastMessage.imageUrl : false,
-          isLastMessageSenderIsTheUser: lastMessage ? lastMessage.sender.toString() === userId : false,
-          isMuted: false,
-          isPinned: false,
-          lastMessageDate: lastMessage ? new Date(lastMessage.timestamp).toLocaleDateString() : '',
-          lastMessageStatus: lastMessage ? lastMessage.status : '',
-          lastMessageText: lastMessage ? lastMessage.content : '',
-          messagesDidntReadAmount: 0,
-          profilePicture: receiverUser?.profilePicture || 'default_url',
-          receiverId: publisherId,
-          data: messages.slice(-10).reverse(),
-          pagination: {
-            isMore: false,
-            page: 1,
-            totalPages: 1,
-            totalItems: messages.length
-          }
+          chatId: chat?.chatId || new mongoose.Types.ObjectId().toHexString(),
+          recentMessages: chat?.messages?.slice(-10).reverse() || []
         };
     
-        socket.emit('chatMessagesByIdResponse', response);
+        socket.emit('chatMessagesByIdResponse', [true, response]);
     
       } catch (error) {
         console.error('Error fetching chat messages:', error);
-        socket.emit('error', { message: 'Server error' });
+        socket.emit('chatMessagesByIdResponse', [false, null]);
       }
     });
     
