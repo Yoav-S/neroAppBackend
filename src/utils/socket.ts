@@ -271,11 +271,11 @@ export const socketHandler = (io: Server) => {
             $project: {
               chatId: 1,
               messageId: '$messages.messageId',
-              sender: '$messages.sender',
+              sender: '$messages.senderId',
               messageText: '$messages.content',
               formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
               status: '$messages.status',
-              image: '$messages.imageUrl',
+              image: { $ifNull: ['$messages.imageUrl', ''] },
               timestamp: '$messages.timestamp',
               isEdited: '$messages.isEdited'
             }
@@ -298,19 +298,18 @@ export const socketHandler = (io: Server) => {
         }
     
         const formattedMessages = chatMessages.map(message => ({
-          messageId: message.messageId,
-          sender: message.sender,
-          messageText: message.messageText,
           formattedTime: message.formattedTime,
-          status: message.status,
           image: message.image,
-          timestamp: message.timestamp,
-          isEdited: message.isEdited
+          isEdited: message.isEdited,
+          messageId: message.messageId,
+          messageText: message.messageText,
+          sender: message.sender,
+          status: message.status,
+          timestamp: message.timestamp
         }));
     
         const response = {
           success: true,
-          chatId: chatMessages[0]?.chatId, // or use the chatId from the first message
           data: formattedMessages,
           pagination: {
             isMore: false,
@@ -319,11 +318,8 @@ export const socketHandler = (io: Server) => {
             totalItems: formattedMessages.length
           }
         };
-        
-        socket.emit('chatMessagesByIdResponse', response);
     
         socket.emit('chatMessagesByIdResponse', response);
-    
       } catch (error) {
         console.error('Error fetching chat messages:', error);
         socket.emit('error', { message: 'Server error' });
