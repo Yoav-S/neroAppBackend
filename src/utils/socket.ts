@@ -266,41 +266,18 @@ export const socketHandler = (io: Server) => {
           },
           {
             $project: {
-              _id: 0, // Exclude MongoDB's internal _id
-              chatId: '$chatId', // Correctly extract the chatId
-              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] }
-            }
-          },
-          { $unwind: '$messages' },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'messages.senderId',
-              foreignField: '_id',
-              as: 'senderInfo'
-            }
-          },
-          {
-            $project: {
               chatId: 1,
-              messageId: '$messages.messageId',
-              sender: { $arrayElemAt: ['$senderInfo._id', 0] },
-              messageText: '$messages.content',
-              formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
-              status: '$messages.status',
-              image: '$messages.imageUrl',
-              timestamp: '$messages.timestamp',
-              isEdited: '$messages.isEdited'
+              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] }
             }
           }
         ];
     
-        const chatMessagesWithId = await chatsCollection.aggregate(pipeline).toArray();
+        const chatResults = await chatsCollection.aggregate(pipeline).toArray();
     
         // If no chat found, create a new chat
-        if (chatMessagesWithId.length === 0) {
+        if (chatResults.length === 0) {
           const newChat = await chatsCollection.insertOne({
-            chatId: new mongoose.Types.ObjectId().toHexString(), // Generate a new chatId
+            chatId: new mongoose.Types.ObjectId().toHexString(),
             participants: [
               mongoose.Types.ObjectId.createFromHexString(publisherId),
               mongoose.Types.ObjectId.createFromHexString(userId)
@@ -311,27 +288,26 @@ export const socketHandler = (io: Server) => {
           });
         }
     
-        // Format the response
-        const formattedChatMessages = chatMessagesWithId.map((message) => ({
-          chatId: message.chatId, // Now correctly using the chatId from the document
-          messageId: message.messageId,
-          sender: message.sender,
-          messageText: message.messageText,
-          formattedTime: message.formattedTime,
-          status: message.status,
-          image: message.image,
-          timestamp: message.timestamp,
-          isEdited: message.isEdited
-        }));
-    
-        const response = {
+        // Prepare the response
+        const response = chatResults.length > 0 ? {
           success: true,
-          data: formattedChatMessages,
+          chatId: chatResults[0].chatId,
+          data: chatResults[0].messages,
           pagination: {
             isMore: false,
             page: 1,
             totalPages: 1,
-            totalItems: formattedChatMessages.length
+            totalItems: chatResults[0].messages.length
+          }
+        } : {
+          success: true,
+          chatId: null,
+          data: [],
+          pagination: {
+            isMore: false,
+            page: 1,
+            totalPages: 1,
+            totalItems: 0
           }
         };
     
