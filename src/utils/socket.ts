@@ -239,7 +239,107 @@ export const socketHandler = (io: Server) => {
 
     
     
+    socket.on('getChatMessagesById', async ({ publisherId, userId }: { publisherId: string; userId?: string }) => {
+      try {
+        // If userId is not provided, use a default value or handle accordingly
+        if (!userId) {
+          socket.emit('chatMessagesByIdResponse', { 
+            success: false, 
+            message: 'User ID is required' 
+          });
+          return;
+        }
     
+        const pageSize = 10; // Retrieving last 10 messages
+    
+        const db = getDatabase();
+        const chatsCollection = db.collection('Chats');
+    
+        // Find a chat where both participants exist
+        const pipeline = [
+          { 
+            $match: { 
+              participants: { 
+                $all: [
+                  mongoose.Types.ObjectId.createFromHexString(publisherId), 
+                  mongoose.Types.ObjectId.createFromHexString(userId)
+                ] 
+              } 
+            } 
+          },
+          { 
+            $project: { 
+              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] } 
+            } 
+          },
+          { $unwind: '$messages' },
+          { 
+            $lookup: { 
+              from: 'users', 
+              localField: 'messages.senderId', 
+              foreignField: '_id', 
+              as: 'senderInfo' 
+            } 
+          },
+          {
+            $project: {
+              messageId: '$messages.messageId',
+              sender: { $arrayElemAt: ['$senderInfo._id', 0] },
+              messageText: '$messages.content',
+              formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
+              status: '$messages.status',
+              image: '$messages.imageUrl',
+              timestamp: '$messages.timestamp',
+              isEdited: '$messages.isEdited'
+            }
+          }
+        ];
+    
+        const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+    
+        // If no chat found, create a new chat
+        if (chatMessages.length === 0) {
+          const newChat = await chatsCollection.insertOne({
+            participants: [
+              mongoose.Types.ObjectId.createFromHexString(publisherId),
+              mongoose.Types.ObjectId.createFromHexString(userId)
+            ],
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          });
+        }
+    
+        // Format the response similar to the previous implementation
+        const formattedChatMessages = chatMessages.map((message) => ({
+          messageId: message.messageId,
+          sender: message.sender,
+          messageText: message.messageText,
+          formattedTime: message.formattedTime,
+          status: message.status,
+          image: message.image,
+          timestamp: message.timestamp,
+          isEdited: message.isEdited
+        }));
+    
+        const response = {
+          success: true,
+          data: formattedChatMessages,
+          pagination: {
+            isMore: false, // Since we're only fetching the last 10 messages
+            page: 1,
+            totalPages: 1,
+            totalItems: formattedChatMessages.length
+          }
+        };
+    
+        socket.emit('chatMessagesByIdResponse', response);
+    
+      } catch (error) {
+        console.error('Error fetching chat messages:', error);
+        socket.emit('error', { message: 'Server error' });
+      }
+    });
     
     
     socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
