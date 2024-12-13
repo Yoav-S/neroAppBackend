@@ -253,29 +253,18 @@ export const socketHandler = (io: Server) => {
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
     
-        const pipeline = [
-          {
-            $match: {
-              participants: {
-                $all: [
-                  mongoose.Types.ObjectId.createFromHexString(publisherId),
-                  mongoose.Types.ObjectId.createFromHexString(userId)
-                ]
-              }
-            }
-          },
-          {
-            $project: {
-              chatId: 1,
-              messages: { $slice: [{ $reverseArray: '$messages' }, pageSize] }
-            }
+        // Find the chat that matches both participants
+        const chat = await chatsCollection.findOne({
+          participants: {
+            $all: [
+              mongoose.Types.ObjectId.createFromHexString(publisherId),
+              mongoose.Types.ObjectId.createFromHexString(userId)
+            ]
           }
-        ];
+        });
     
-        const chatResults = await chatsCollection.aggregate(pipeline).toArray();
-    
-        // If no chat found, create a new chat
-        if (chatResults.length === 0) {
+        // If no chat found, create a new one
+        if (!chat) {
           const newChat = await chatsCollection.insertOne({
             chatId: new mongoose.Types.ObjectId().toHexString(),
             participants: [
@@ -289,25 +278,15 @@ export const socketHandler = (io: Server) => {
         }
     
         // Prepare the response
-        const response = chatResults.length > 0 ? {
+        const response = {
           success: true,
-          chatId: chatResults[0].chatId,
-          data: chatResults[0].messages,
+          chatId: chat?.chatId || null,
+          data: chat?.messages?.slice(-10).reverse() || [],
           pagination: {
             isMore: false,
             page: 1,
             totalPages: 1,
-            totalItems: chatResults[0].messages.length
-          }
-        } : {
-          success: true,
-          chatId: null,
-          data: [],
-          pagination: {
-            isMore: false,
-            page: 1,
-            totalPages: 1,
-            totalItems: 0
+            totalItems: chat?.messages?.length || 0
           }
         };
     
