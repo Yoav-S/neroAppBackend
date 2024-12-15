@@ -439,17 +439,44 @@ export const socketHandler = (io: Server) => {
           throw new Error('Chat ID and Sender are required');
         }
     
+        const senderObjectId = mongoose.Types.ObjectId.createFromHexString(sender);
+        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId);
+    
+        // Check if chat exists, if not, create a new chat
+        let chat = await chatsCollection.findOne({ _id: chatObjectId });
+        
+        if (!chat) {
+          // Find the other participant (receiver)
+          const user = await usersCollection.findOne({ _id: senderObjectId });
+          if (!user || !user.chats || user.chats.length === 0) {
+            throw new Error('Unable to determine chat participants');
+          }
+    
+          // Get the receiver's ID from the user's chats
+          const chatEntry = user.chats.find((chat: any) => chat.chatId.equals(chatObjectId));
+          if (!chatEntry) {
+            throw new Error('Chat not found in user\'s chats');
+          }
+    
+          // Create a new chat if it doesn't exist
+          const newChat = {
+            _id: chatObjectId,
+            chatId: chatId,
+            participants: [senderObjectId],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastMessageContent: "",
+            lastMessageDate: null,
+            messages: []
+          };
+    
+          await chatsCollection.insertOne(newChat);
+          chat = newChat;
+        }
+    
         let newMessages: any[] = [];
         let lastMessageContent = messageText;
         let lastMessageDate = new Date();
-    
-        // Ensure chat is active for both users
-        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId);
-        const senderObjectId = mongoose.Types.ObjectId.createFromHexString(sender);
-    
-        // Find the chat participants
-        const chat = await chatsCollection.findOne({ _id: chatObjectId });
-        if (!chat) throw new Error('Chat not found');
     
         const participantIds = chat.participants;
     
