@@ -427,13 +427,13 @@ export const socketHandler = (io: Server) => {
     
     socket.on('sendMessage', async (formData) => {
       try {
+        console.log('Starting sendMessage with formData:', formData);
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
         const usersCollection = db.collection('users');
     
         let messageText = '';
         let sender = '';
-        let reciever = '';
         let chatId = '';
         let images: any[] = [];
     
@@ -443,68 +443,80 @@ export const socketHandler = (io: Server) => {
             messageText = value;
           } else if (key === 'sender') {
             sender = value;
-          } else if (key === 'reciever') {
-            reciever = value;
           } else if (key === 'chatId') {
             chatId = value;
           } else if (key === 'imagesUrl') {
             images.push(value);
           }
         });
-        console.log('Parsed values:', {
-          messageText,
-          sender,
-          reciever,
-          chatId,
-          'number of images': images.length
-        });
-        if (!chatId || !sender || !reciever) {
-          throw new Error('Chat ID, Sender, and Receiver are required');
+    
+        if (!chatId || !sender) {
+          throw new Error('Chat ID and Sender are required');
+        }
+    
+        console.log('Looking for chat with ID:', chatId);
+        
+        // First, find the chat and get participants
+        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId);
+        const chat = await chatsCollection.findOne({ _id: chatObjectId });
+        
+        if (!chat) {
+          console.error('Chat not found in Chats collection:', chatId);
+          throw new Error('Chat not found');
+        }
+    
+        console.log('Found chat with participants:', chat.participants);
+        
+        // Get both participants from the chat
+        const [participant1, participant2] = chat.participants;
+        
+        // Check if chat exists in both users' chats arrays
+        const usersWithChat = await usersCollection.find({
+          _id: { $in: [participant1, participant2] },
+          'chats.chatId': chatObjectId
+        }).toArray();
+    
+        console.log('Found users with this chat:', usersWithChat.length);
+    
+        if (usersWithChat.length !== 2) {
+          console.error('Chat not properly linked to both users');
+          // Add chat to users if missing
+          for (const participantId of [participant1, participant2]) {
+            const userHasChat = usersWithChat.some(user => 
+              user._id.toString() === participantId.toString()
+            );
+    
+            if (!userHasChat) {
+              console.log('Adding chat to user:', participantId);
+              await usersCollection.updateOne(
+                { _id: participantId },
+                {
+                  $addToSet: {
+                    chats: {
+                      chatId: chatObjectId,
+                      isPinned: false,
+                      isMuted: false
+                    }
+                  }
+                }
+              );
+            }
+          }
         }
     
         const senderObjectId = mongoose.Types.ObjectId.createFromHexString(sender);
-        const recieverObjectId = mongoose.Types.ObjectId.createFromHexString(reciever);
-        const chatObjectId = mongoose.Types.ObjectId.createFromHexString(chatId);
     
-        // Check and add chat to users' chats array if not exists
-        const usersToUpdate = [
-          { userId: senderObjectId, chatPartnerId: recieverObjectId },
-          { userId: recieverObjectId, chatPartnerId: senderObjectId }
-        ];
-    
-        for (const { userId, chatPartnerId } of usersToUpdate) {
-          const user = await usersCollection.findOne({ _id: userId });
-          
-          if (!user) {
-            throw new Error(`User with ID ${userId} not found`);
-          }
-    
-          // Check if chat already exists in user's chats array
-          const chatExists = user.chats.some((chat: any) => 
-            chat.chatId.toString() === chatObjectId.toString()
-          );
-    
-          // If chat doesn't exist, add it
-          if (!chatExists) {
-            await usersCollection.updateOne(
-              { _id: userId },
-              { 
-                $push: { 
-                  chats: { 
-                    chatId: chatObjectId, 
-                    isPinned: false, 
-                    isMuted: false 
-                  } 
-                } as any
-              }
-            );
-          }
+        // Verify sender is a participant
+        if (!chat.participants.some((p: any) => p.toString() === senderObjectId.toString())) {
+          console.error('Sender is not a participant in this chat');
+          throw new Error('Unauthorized sender');
         }
     
         let newMessages: any[] = [];
         let lastMessageContent = messageText;
         let lastMessageDate = new Date();
-        
+    
+        // Rest of your existing message handling code...
         if (messageText && images.length === 0) {
           const textMessage = {
             messageId: new mongoose.Types.ObjectId(),
