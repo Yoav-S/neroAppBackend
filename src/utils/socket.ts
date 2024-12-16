@@ -174,14 +174,11 @@ export const socketHandler = (io: Server) => {
         const senderObjectId = new mongoose.Types.ObjectId(senderId);
         const receiverObjectId = new mongoose.Types.ObjectId(recieverId);
     
-        // Check if a chat already exists between these two participants
-        // Use $elemMatch to ensure both participants are present in the exact same array
+        // Check for existing chat first
         const existingChat = await chatsCollection.findOne({
           participants: { 
-            $all: [
-              { $elemMatch: { $eq: senderObjectId } },
-              { $elemMatch: { $eq: receiverObjectId } }
-            ]
+            $all: [senderObjectId, receiverObjectId],
+            $size: 2
           }
         });
     
@@ -195,45 +192,56 @@ export const socketHandler = (io: Server) => {
               receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
               receiverPicture: receiver.picture
             });
+            return;
           }
-          return;
         }
     
-        // Generate a unique ObjectId to be used for both _id and chatId
+        // If no existing chat, create a new one
         const chatObjectId = new mongoose.Types.ObjectId();
+        const result = await chatsCollection.findOneAndUpdate(
+          {
+            participants: { 
+              $all: [senderObjectId, receiverObjectId],
+              $size: 2 
+            }
+          },
+          {
+            $setOnInsert: {
+              _id: chatObjectId,
+              chatId: chatObjectId.toHexString(),
+              participants: [senderObjectId, receiverObjectId],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              lastMessageContent: "",
+              lastMessageDate: null,
+              messages: []
+            }
+          },
+          {
+            upsert: true,
+            returnDocument: 'after'
+          }
+        );
     
-        // Create a new chat document
-        const newChat = {
-          _id: chatObjectId,
-          chatId: chatObjectId.toHexString(),
-          participants: [senderObjectId, receiverObjectId],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastMessageContent: "",
-          lastMessageDate: null,
-          messages: []
+        // Fallback to using the newly created/existing chat
+        const chatToUse = result || existingChat || {
+          chatId: chatObjectId.toHexString()
         };
     
-        // Insert the new chat document
-        const insertResult = await chatsCollection.insertOne(newChat);
-    
-        // Check if the insertion was successful
-        if (insertResult.insertedId) {
-          // Retrieve receiver's profile details
-          const receiver = await usersCollection.findOne({ _id: receiverObjectId });
-          if (receiver) {
-            socket.emit('createChatResponse', {
-              success: true,
-              chatId: chatObjectId.toHexString(),
-              receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
-              receiverPicture: receiver.picture
-            });
-          } else {
-            socket.emit('createChatResponse', { success: false });
-          }
+        // Retrieve receiver's profile details
+        const receiver = await usersCollection.findOne({ _id: receiverObjectId });
+        
+        if (receiver) {
+          socket.emit('createChatResponse', {
+            success: true,
+            chatId: chatToUse.chatId,
+            receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
+            receiverPicture: receiver.picture
+          });
         } else {
           socket.emit('createChatResponse', { success: false });
         }
+    
       } catch (error) {
         console.error('Error in createChatAttempt:', error);
         socket.emit('createChatResponse', { success: false });
