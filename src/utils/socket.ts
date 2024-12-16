@@ -312,18 +312,6 @@ export const socketHandler = (io: Server) => {
     
         const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
     
-        if (chatMessages.length === 0) {
-          await chatsCollection.insertOne({
-            chatId: new mongoose.Types.ObjectId().toHexString(),
-            participants: [
-              mongoose.Types.ObjectId.createFromHexString(publisherId),
-              mongoose.Types.ObjectId.createFromHexString(userId)
-            ],
-            messages: [],
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
-        }
     
         const formattedMessages = chatMessages.map(message => ({
           formattedTime: message.formattedTime,
