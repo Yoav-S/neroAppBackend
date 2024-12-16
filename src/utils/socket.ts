@@ -175,8 +175,14 @@ export const socketHandler = (io: Server) => {
         const receiverObjectId = new mongoose.Types.ObjectId(recieverId);
     
         // Check if a chat already exists between these two participants
+        // Use $elemMatch to ensure both participants are present in the exact same array
         const existingChat = await chatsCollection.findOne({
-          participants: { $all: [senderObjectId, receiverObjectId] }
+          participants: { 
+            $all: [
+              { $elemMatch: { $eq: senderObjectId } },
+              { $elemMatch: { $eq: receiverObjectId } }
+            ]
+          }
         });
     
         if (existingChat) {
