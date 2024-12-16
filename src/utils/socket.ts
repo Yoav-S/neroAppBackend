@@ -171,8 +171,8 @@ export const socketHandler = (io: Server) => {
         const usersCollection = db.collection('users');
     
         // Convert `senderId` and `recieverId` to MongoDB ObjectId instances
-        const senderObjectId = new mongoose.Types.ObjectId(senderId);
-        const receiverObjectId = new mongoose.Types.ObjectId(recieverId);
+        const senderObjectId = mongoose.Types.ObjectId.createFromHexString(senderId);
+        const receiverObjectId = mongoose.Types.ObjectId.createFromHexString(recieverId);
     
         // Check for existing chat first
         const existingChat = await chatsCollection.findOne({
