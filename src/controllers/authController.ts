@@ -28,11 +28,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       throw createAppError(ErrorCode.INVALID_EMAIL_FORMAT);
     }
 
-    // Validate password format (example: at least 8 characters, 1 uppercase, 1 lowercase, 1 number)
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
-    if (!passwordRegex.test(password)) {
-      throw createAppError(ErrorCode.INVALID_PASSWORD_FORMAT);
-    }
+    // todo - insert password verification
 
     // Check if user already exists
     const existingUser = await usersCollection.findOne({ email });
