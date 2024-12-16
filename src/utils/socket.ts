@@ -166,25 +166,44 @@ export const socketHandler = (io: Server) => {
     
     socket.on('createChatAttempt', async ({ senderId, recieverId }: { senderId: string; recieverId: string }) => {
       try {
+        console.log('Starting createChatAttempt with:', { senderId, recieverId });
+        
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
         const usersCollection = db.collection('users');
+        
+        // Convert IDs and validate them
+        let senderObjectId, receiverObjectId;
+        try {
+          senderObjectId = new mongoose.Types.ObjectId(senderId);
+          receiverObjectId = new mongoose.Types.ObjectId(recieverId);
+          console.log('Converted ObjectIds:', { senderObjectId, receiverObjectId });
+        } catch (error) {
+          console.error('Invalid ObjectId format:', error);
+          socket.emit('createChatResponse', { 
+            success: false, 
+            error: 'Invalid user ID format' 
+          });
+          return;
+        }
     
-        // Convert `senderId` and `recieverId` to MongoDB ObjectId instances
-        const senderObjectId = mongoose.Types.ObjectId.createFromHexString(senderId);
-        const receiverObjectId = mongoose.Types.ObjectId.createFromHexString(recieverId);
-    
-        // Check for existing chat first
+        // Check for existing chat - using an array match that works in both directions
         const existingChat = await chatsCollection.findOne({
-          participants: { 
-            $all: [senderObjectId, receiverObjectId],
-            $size: 2
-          }
+          $or: [
+            { participants: [senderObjectId, receiverObjectId] },
+            { participants: [receiverObjectId, senderObjectId] }
+          ]
         });
     
+        console.log('Existing chat search result:', existingChat);
+    
         if (existingChat) {
-          // If chat exists, retrieve receiver details and return them
+          console.log('Found existing chat:', existingChat.chatId);
+          
+          // Get receiver details
           const receiver = await usersCollection.findOne({ _id: receiverObjectId });
+          console.log('Retrieved receiver details:', receiver?._id);
+    
           if (receiver) {
             socket.emit('createChatResponse', {
               success: true,
@@ -194,57 +213,52 @@ export const socketHandler = (io: Server) => {
             });
             return;
           }
-        }
-    
-        // If no existing chat, create a new one
-        const chatObjectId = new mongoose.Types.ObjectId();
-        const result = await chatsCollection.findOneAndUpdate(
-          {
-            participants: { 
-              $all: [senderObjectId, receiverObjectId],
-              $size: 2 
-            }
-          },
-          {
-            $setOnInsert: {
-              _id: chatObjectId,
-              chatId: chatObjectId.toHexString(),
-              participants: [senderObjectId, receiverObjectId],
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              lastMessageContent: "",
-              lastMessageDate: null,
-              messages: []
-            }
-          },
-          {
-            upsert: true,
-            returnDocument: 'after'
-          }
-        );
-    
-        // Fallback to using the newly created/existing chat
-        const chatToUse = result || existingChat || {
-          chatId: chatObjectId.toHexString()
-        };
-    
-        // Retrieve receiver's profile details
-        const receiver = await usersCollection.findOne({ _id: receiverObjectId });
-        
-        if (receiver) {
-          socket.emit('createChatResponse', {
-            success: true,
-            chatId: chatToUse.chatId,
-            receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
-            receiverPicture: receiver.picture
-          });
         } else {
-          socket.emit('createChatResponse', { success: false });
+          console.log('No existing chat found, creating new chat');
+          
+          // Create new chat
+          const chatObjectId = new mongoose.Types.ObjectId();
+          const newChat = {
+            _id: chatObjectId,
+            chatId: chatObjectId.toHexString(),
+            participants: [senderObjectId, receiverObjectId],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastMessageContent: "",
+            lastMessageDate: null,
+            messages: []
+          };
+    
+          // Insert new chat directly instead of using findOneAndUpdate
+          const result = await chatsCollection.insertOne(newChat);
+          console.log('New chat created:', result.insertedId);
+    
+          // Get receiver details
+          const receiver = await usersCollection.findOne({ _id: receiverObjectId });
+          console.log('Retrieved receiver details for new chat:', receiver?._id);
+    
+          if (receiver) {
+            socket.emit('createChatResponse', {
+              success: true,
+              chatId: newChat.chatId,
+              receiverFullName: `${receiver.firstName} ${receiver.lastName}`,
+              receiverPicture: receiver.picture
+            });
+            return;
+          }
         }
+    
+        socket.emit('createChatResponse', { 
+          success: false,
+          error: 'Could not find receiver details'
+        });
     
       } catch (error) {
         console.error('Error in createChatAttempt:', error);
-        socket.emit('createChatResponse', { success: false });
+        socket.emit('createChatResponse', { 
+          success: false,
+          error: 'Internal server error'
+        });
       }
     });
     
