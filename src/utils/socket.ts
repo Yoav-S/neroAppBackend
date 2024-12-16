@@ -5,8 +5,32 @@ import { formatLastMessageDate, formatTime } from '../controllers/chatController
 import { bucket } from '../config/firebaseConfig';
 export const socketHandler = (io: Server) => {
   io.on('connection', (socket: Socket) => {
-    socket.on('joinRoom', (chatId: string) => {
-      socket.join(chatId);  // Joins the chat room with the chatId
+    socket.on('joinRoom', async ({chatId, senderId, recieverId}: {chatId: string; senderId: string; recieverId: string }) => {
+      await socket.join(chatId);
+      const db = getDatabase();
+      const chatsCollection = db.collection('Chats');
+      const senderObjectId = mongoose.Types.ObjectId.createFromHexString(senderId);
+      const receiverObjectId = mongoose.Types.ObjectId.createFromHexString(recieverId);
+  
+      // Check if a chat already exists between these two participants
+      const existingChat = await chatsCollection.findOne({
+        participants: { $all: [senderObjectId, receiverObjectId] }
+      });
+      if (existingChat) {
+        return;
+      }
+      else {
+        const newChat = {
+          chatId: new mongoose.Types.ObjectId(),
+          participants: [senderObjectId, receiverObjectId],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastMessageContent: "",
+          lastMessageDate: null,
+          messages: []
+        };
+        await chatsCollection.insertOne(newChat);
+      }
     });
     socket.on('getChatsPagination', async ({ userId, pageNumber }: any) => {
       try {
