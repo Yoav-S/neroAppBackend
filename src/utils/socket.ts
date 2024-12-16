@@ -425,8 +425,6 @@ export const socketHandler = (io: Server) => {
       }
     });
     
-    
-
     socket.on('sendMessage', async (formData) => {
       try {
         const db = getDatabase();
@@ -514,7 +512,47 @@ export const socketHandler = (io: Server) => {
           newMessages.push(textMessage);
         }
     
-        // ... (rest of the existing image processing and message sending logic remains the same)
+        // Process image files if they exist
+        for (const [index, image] of images.entries()) {
+          const uniqueFilename = `Chats/${chatId}/${image.name}`;
+          const file = bucket.file(uniqueFilename);
+    
+          try {
+            const base64Data = image.base64;
+            const fileBuffer = Buffer.from(base64Data, 'base64');
+    
+            await file.save(fileBuffer, {
+              metadata: {
+                contentType: image.type,
+              },
+              public: true,
+            });
+    
+            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${uniqueFilename}`;
+    
+            const imageMessage = {
+              messageId: new mongoose.Types.ObjectId(),
+              senderId: senderObjectId,
+              content: index === 0 ? messageText || '' : '',
+              imageUrl,
+              timestamp: new Date(),
+              status: 'Delivered',
+              isEdited: false,
+            };
+    
+            newMessages.push(imageMessage);
+            lastMessageContent = imageUrl;
+            lastMessageDate = imageMessage.timestamp;
+          } catch (error) {
+            console.error('Error saving image:', error);
+            continue;
+          }
+        }
+    
+        // If no messages were created, throw an error
+        if (newMessages.length === 0) {
+          throw new Error('No valid messages to send');
+        }
     
         // Save the messages to the chat's messages array in the Chats collection
         const result = await chatsCollection.updateOne(
@@ -543,12 +581,7 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Error sending message' });
       }
     });
-    
-    
-    
-    
-    
-    
+
     socket.on('updateUnreadMessage', async (messageDidntReadAmount: number, chatId: string) => {
       try {
         const db = getDatabase();
@@ -593,8 +626,6 @@ export const socketHandler = (io: Server) => {
         });
       }
     });
-    
-    
     
     socket.on('deleteChat', async (chatId, userId) => {
       try {
@@ -650,9 +681,6 @@ export const socketHandler = (io: Server) => {
       }
     });
     
-    
-    
-    
     socket.on('pinChat', async ({ chatId, userId }) => {
       try {
         const db = getDatabase();
@@ -702,8 +730,6 @@ export const socketHandler = (io: Server) => {
         socket.emit('error', { message: 'Server error: ' + error.message });
       }
     });
-    
-    
     
     socket.on('muteChat', async ({ chatId, userId }) => {
       try {
