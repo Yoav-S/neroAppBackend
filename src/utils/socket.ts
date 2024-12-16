@@ -451,7 +451,13 @@ export const socketHandler = (io: Server) => {
             images.push(value);
           }
         });
-    
+        console.log('Parsed values:', {
+          messageText,
+          sender,
+          reciever,
+          chatId,
+          'number of images': images.length
+        });
         if (!chatId || !sender || !reciever) {
           throw new Error('Chat ID, Sender, and Receiver are required');
         }
