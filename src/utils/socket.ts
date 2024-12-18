@@ -279,9 +279,21 @@ export const socketHandler = (io: Server) => {
           return;
         }
     
-        const pageSize = 10;
+        const pageSize = 20; // Changed from 10 to 20
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
+    
+        // First, get total message count for the chat
+        const chatDoc = await chatsCollection.findOne({
+          participants: {
+            $all: [
+              mongoose.Types.ObjectId.createFromHexString(publisherId),
+              mongoose.Types.ObjectId.createFromHexString(userId)
+            ]
+          }
+        }, { projection: { 'messages': 1 } });
+    
+        const totalMessages = chatDoc?.messages?.length || 0;
     
         const pipeline = [
           {
@@ -314,7 +326,6 @@ export const socketHandler = (io: Server) => {
     
         const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
     
-    
         const formattedMessages = chatMessages.map(message => ({
           formattedTime: message.formattedTime,
           image: message.image,
@@ -326,15 +337,17 @@ export const socketHandler = (io: Server) => {
           timestamp: message.timestamp
         }));
     
+        const hasMoreMessages = totalMessages > pageSize;
+    
         const response = {
           success: true,
-          chatId: chatMessages[0]?.chatId, // Add this back
+          chatId: chatMessages[0]?.chatId,
           data: formattedMessages,
           pagination: {
-            isMore: false,
+            isMore: hasMoreMessages,
             page: 1,
-            totalPages: 1,
-            totalItems: formattedMessages.length
+            totalPages: Math.ceil(totalMessages / pageSize),
+            totalItems: totalMessages
           }
         };
     
