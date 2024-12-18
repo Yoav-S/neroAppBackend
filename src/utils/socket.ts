@@ -41,7 +41,7 @@ export const socketHandler = (io: Server) => {
     
         // Get chat IDs and metadata from user's chats array
         const userChats = user.chats;
-        const userChatIds = userChats.map((chat: any) => new mongoose.Types.ObjectId(chat.chatId));
+        const userChatIds = userChats.map((chat: any) => mongoose.Types.ObjectId.createFromHexString(chat.chatId));
     
         // Fetch only the chats that exist in the user's chats array
         const allChats = await chatsCollection
