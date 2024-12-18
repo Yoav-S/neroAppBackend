@@ -13,7 +13,7 @@ export const socketHandler = (io: Server) => {
         const limit = 7;
         const skip = pageNumber * limit;
     
-        const userObjectId = new mongoose.Types.ObjectId(userId);
+        const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
     
         const db = getDatabase();
         const chatsCollection = db.collection('Chats');
