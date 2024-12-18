@@ -101,7 +101,8 @@ export const socketHandler = (io: Server) => {
             );
     
             const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
-    
+            const hasMoreMessages = chat.messages ? chat.messages.length > 20 : false;
+
             let unreadMessagesCount = 0;
             if (chat.messages) {
               for (const message of chat.messages.reverse()) {
@@ -129,6 +130,7 @@ export const socketHandler = (io: Server) => {
               isPinned: chat.isPinned,
               isMuted: chat.isMuted,
               messagesDidntReadAmount: unreadMessagesCount,
+              hasMoreMessages, // Add this new property
               recentMessages: chat.messages
                 ? chat.messages.slice(-20).map((message: any) => ({
                     messageId: message.messageId,
