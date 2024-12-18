@@ -10,9 +10,28 @@ export const socketHandler = (io: Server) => {
     });
     socket.on('getChatsPagination', async ({ userId, pageNumber }: any) => {
       try {
+        // Validate userId
+        if (!userId || typeof userId !== 'string') {
+          console.log('Invalid userId provided:', userId);
+          return socket.emit('chatsPaginationResponse', { 
+            success: false,
+            error: 'Invalid user ID provided'
+          });
+        }
+    
+        // Validate that userId is a valid ObjectId string
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+          console.log('Invalid ObjectId format for userId:', userId);
+          return socket.emit('chatsPaginationResponse', { 
+            success: false,
+            error: 'Invalid user ID format'
+          });
+        }
+    
         const limit = 7;
         const skip = pageNumber * limit;
     
+        // Use ObjectId.createFromHexString for string IDs
         const userObjectId = mongoose.Types.ObjectId.createFromHexString(userId);
     
         const db = getDatabase();
@@ -39,19 +58,41 @@ export const socketHandler = (io: Server) => {
           });
         }
     
-        // Get chat IDs and metadata from user's chats array
+        // Convert chat IDs to ObjectIds using createFromHexString
         const userChats = user.chats;
-        const userChatIds = userChats.map((chat: any) => mongoose.Types.ObjectId.createFromHexString(chat.chatId));
+        const validChatIds = userChats
+          .filter((chat: any) => chat?.chatId && mongoose.Types.ObjectId.isValid(chat.chatId))
+          .map((chat: any) => mongoose.Types.ObjectId.createFromHexString(chat.chatId.toString()));
+    
+        if (validChatIds.length === 0) {
+          console.log('No valid chat IDs found');
+          return socket.emit('chatsPaginationResponse', {
+            success: true,
+            data: [],
+            pagination: {
+              isMore: false,
+              page: pageNumber,
+              totalPages: 0,
+              totalChats: 0,
+            },
+          });
+        }
     
         // Fetch only the chats that exist in the user's chats array
         const allChats = await chatsCollection
-          .find({ _id: { $in: userChatIds } })
+          .find({ _id: { $in: validChatIds } })
           .toArray();
     
         // Combine chat data with user's chat metadata
         const combinedChats = allChats.map((chat: any) => {
-          const userChatData = userChats.find((uc: any) => uc.chatId.equals(chat._id));
-          return { ...chat, isPinned: userChatData.isPinned, isMuted: userChatData.isMuted };
+          const userChatData = userChats.find((uc: any) => 
+            uc.chatId && chat._id && uc.chatId.toString() === chat._id.toString()
+          );
+          return { 
+            ...chat, 
+            isPinned: userChatData?.isPinned || false, 
+            isMuted: userChatData?.isMuted || false 
+          };
         });
     
         // Separate pinned and non-pinned chats
@@ -87,70 +128,84 @@ export const socketHandler = (io: Server) => {
         // Paginate results
         const paginatedChats = sortedChats.slice(skip, skip + limit);
     
-        // Map chat details
+        // Map chat details with error handling
         const resultChats = await Promise.all(
           paginatedChats.map(async (chat: any) => {
-            const otherParticipantIds = chat.participants.filter(
-              (id: any) => id.toString() !== userObjectId.toString()
-            );
+            try {
+              const otherParticipantIds = chat.participants
+                .filter((id: any) => id.toString() !== userObjectId.toString())
+                .filter((id: any) => mongoose.Types.ObjectId.isValid(id))
+                .map((id: any) => new mongoose.Types.ObjectId(id));
     
-            // Fetch the other user's info
-            const otherUser = await usersCollection.findOne(
-              { _id: { $in: otherParticipantIds } },
-              { projection: { picture: 1, firstName: 1, lastName: 1 } }
-            );
+              if (otherParticipantIds.length === 0) {
+                console.log(`No valid participant IDs found for chat ${chat._id}`);
+                return null;
+              }
     
-            const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
-            const hasMoreMessages = chat.messages ? chat.messages.length > 20 : false;
-
-            let unreadMessagesCount = 0;
-            if (chat.messages) {
-              for (const message of chat.messages.reverse()) {
-                if (message.senderId.toString() !== userObjectId.toString() && message.status !== 'Read') {
-                  unreadMessagesCount++;
-                } else {
-                  break;
+              // Fetch the other user's info
+              const otherUser = await usersCollection.findOne(
+                { _id: { $in: otherParticipantIds } },
+                { projection: { picture: 1, firstName: 1, lastName: 1 } }
+              );
+    
+              const lastMessage = chat.messages ? chat.messages[chat.messages.length - 1] : null;
+              const hasMoreMessages = chat.messages ? chat.messages.length > 20 : false;
+    
+              let unreadMessagesCount = 0;
+              if (chat.messages) {
+                for (const message of chat.messages.reverse()) {
+                  if (message.senderId.toString() !== userObjectId.toString() && message.status !== 'Read') {
+                    unreadMessagesCount++;
+                  } else {
+                    break;
+                  }
                 }
               }
-            }
     
-            return {
-              chatId: chat._id,
-              profilePicture: otherUser?.picture || '',
-              fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
-              lastMessageText: lastMessage?.content || '',
-              lastMessageDate: lastMessage?.timestamp
-                ? formatLastMessageDate(new Date(lastMessage.timestamp))
-                : '',
-              isLastMessageSenderIsTheUser:
-                lastMessage?.senderId.toString() === userObjectId.toString(),
-              lastMessageStatus: lastMessage?.status || '',
-              isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
-              receiverId: otherParticipantIds.toString(),
-              isPinned: chat.isPinned,
-              isMuted: chat.isMuted,
-              messagesDidntReadAmount: unreadMessagesCount,
-              hasMoreMessages, // Add this new property
-              recentMessages: chat.messages
-                ? chat.messages.slice(-20).map((message: any) => ({
-                    messageId: message.messageId,
-                    sender: message.senderId,
-                    messageText: message.content,
-                    formattedTime: formatTime(new Date(message.timestamp)),
-                    status: message.status,
-                    image: message.imageUrl || '',
-                    timestamp: message.timestamp,
-                    isEdited: message.isEdited || false,
-                  }))
-                : [],
-            };
+              return {
+                chatId: chat._id,
+                profilePicture: otherUser?.picture || '',
+                fullName: otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : '',
+                lastMessageText: lastMessage?.content || '',
+                lastMessageDate: lastMessage?.timestamp
+                  ? formatLastMessageDate(new Date(lastMessage.timestamp))
+                  : '',
+                isLastMessageSenderIsTheUser:
+                  lastMessage?.senderId.toString() === userObjectId.toString(),
+                lastMessageStatus: lastMessage?.status || '',
+                isLastMessageIsImage: lastMessage?.imageUrl ? true : false,
+                receiverId: otherParticipantIds[0]?.toString() || '',
+                isPinned: chat.isPinned,
+                isMuted: chat.isMuted,
+                messagesDidntReadAmount: unreadMessagesCount,
+                hasMoreMessages,
+                recentMessages: chat.messages
+                  ? chat.messages.slice(-20).map((message: any) => ({
+                      messageId: message.messageId,
+                      sender: message.senderId,
+                      messageText: message.content,
+                      formattedTime: formatTime(new Date(message.timestamp)),
+                      status: message.status,
+                      image: message.imageUrl || '',
+                      timestamp: message.timestamp,
+                      isEdited: message.isEdited || false,
+                    }))
+                  : [],
+              };
+            } catch (error) {
+              console.error(`Error processing chat ${chat._id}:`, error);
+              return null;
+            }
           })
         );
+    
+        // Filter out any null results from failed chat processing
+        const validResultChats = resultChats.filter(chat => chat !== null);
     
         // Emit the response to the socket
         socket.emit('chatsPaginationResponse', {
           success: true,
-          data: resultChats,
+          data: validResultChats,
           pagination: {
             isMore: sortedChats.length > (pageNumber + 1) * limit,
             page: pageNumber,
@@ -160,7 +215,10 @@ export const socketHandler = (io: Server) => {
         });
       } catch (error) {
         console.error("Error in getChatsPagination:", error);
-        socket.emit('chatsPaginationResponse', { success: false });
+        socket.emit('chatsPaginationResponse', { 
+          success: false,
+          error: 'Internal server error'
+        });
       }
     });
     
@@ -269,94 +327,94 @@ export const socketHandler = (io: Server) => {
 
     
     
-    socket.on('getChatMessagesById', async ({ publisherId, userId }: { publisherId: string; userId?: string }) => {
-      try {
-        if (!userId) {
-          socket.emit('chatMessagesByIdResponse', {
-            success: false,
-            message: 'User ID is required'
-          });
-          return;
-        }
-    
-        const pageSize = 20; // Changed from 10 to 20
-        const db = getDatabase();
-        const chatsCollection = db.collection('Chats');
-    
-        // First, get total message count for the chat
-        const chatDoc = await chatsCollection.findOne({
+socket.on('getChatMessagesById', async ({ publisherId, userId }: { publisherId: string; userId?: string }) => {
+  try {
+    if (!userId) {
+      socket.emit('chatMessagesByIdResponse', {
+        success: false,
+        message: 'User ID is required'
+      });
+      return;
+    }
+
+    const pageSize = 20; // Changed from 10 to 20
+    const db = getDatabase();
+    const chatsCollection = db.collection('Chats');
+
+    // First, get total message count for the chat
+    const chatDoc = await chatsCollection.findOne({
+      participants: {
+        $all: [
+          mongoose.Types.ObjectId.createFromHexString(publisherId),
+          mongoose.Types.ObjectId.createFromHexString(userId)
+        ]
+      }
+    }, { projection: { 'messages': 1 } });
+
+    const totalMessages = chatDoc?.messages?.length || 0;
+
+    const pipeline = [
+      {
+        $match: {
           participants: {
             $all: [
               mongoose.Types.ObjectId.createFromHexString(publisherId),
               mongoose.Types.ObjectId.createFromHexString(userId)
             ]
           }
-        }, { projection: { 'messages': 1 } });
-    
-        const totalMessages = chatDoc?.messages?.length || 0;
-    
-        const pipeline = [
-          {
-            $match: {
-              participants: {
-                $all: [
-                  mongoose.Types.ObjectId.createFromHexString(publisherId),
-                  mongoose.Types.ObjectId.createFromHexString(userId)
-                ]
-              }
-            }
-          },
-          { $unwind: '$messages' },
-          { $sort: { 'messages.timestamp': -1 } },
-          { $limit: pageSize },
-          {
-            $project: {
-              chatId: 1,
-              messageId: '$messages.messageId',
-              sender: '$messages.senderId',
-              messageText: '$messages.content',
-              formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
-              status: '$messages.status',
-              image: { $ifNull: ['$messages.imageUrl', ''] },
-              timestamp: '$messages.timestamp',
-              isEdited: '$messages.isEdited'
-            }
-          }
-        ];
-    
-        const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
-    
-        const formattedMessages = chatMessages.map(message => ({
-          formattedTime: message.formattedTime,
-          image: message.image,
-          isEdited: message.isEdited,
-          messageId: message.messageId,
-          messageText: message.messageText,
-          sender: message.sender,
-          status: message.status,
-          timestamp: message.timestamp
-        }));
-    
-        const hasMoreMessages = totalMessages > pageSize;
-    
-        const response = {
-          success: true,
-          chatId: chatMessages[0]?.chatId,
-          data: formattedMessages,
-          pagination: {
-            isMore: hasMoreMessages,
-            page: 1,
-            totalPages: Math.ceil(totalMessages / pageSize),
-            totalItems: totalMessages
-          }
-        };
-    
-        socket.emit('chatMessagesByIdResponse', response);
-      } catch (error) {
-        console.error('Error fetching chat messages:', error);
-        socket.emit('error', { message: 'Server error' });
+        }
+      },
+      { $unwind: '$messages' },
+      { $sort: { 'messages.timestamp': -1 } },
+      { $limit: pageSize },
+      {
+        $project: {
+          chatId: 1,
+          messageId: '$messages.messageId',
+          sender: '$messages.senderId',
+          messageText: '$messages.content',
+          formattedTime: { $dateToString: { format: '%H:%M', date: '$messages.timestamp' } },
+          status: '$messages.status',
+          image: { $ifNull: ['$messages.imageUrl', ''] },
+          timestamp: '$messages.timestamp',
+          isEdited: '$messages.isEdited'
+        }
       }
-    });
+    ];
+
+    const chatMessages = await chatsCollection.aggregate(pipeline).toArray();
+
+    const formattedMessages = chatMessages.map(message => ({
+      formattedTime: message.formattedTime,
+      image: message.image,
+      isEdited: message.isEdited,
+      messageId: message.messageId,
+      messageText: message.messageText,
+      sender: message.sender,
+      status: message.status,
+      timestamp: message.timestamp
+    }));
+
+    const hasMoreMessages = totalMessages > pageSize;
+
+    const response = {
+      success: true,
+      chatId: chatMessages[0]?.chatId,
+      data: formattedMessages,
+      pagination: {
+        isMore: hasMoreMessages,
+        page: 1,
+        totalPages: Math.ceil(totalMessages / pageSize),
+        totalItems: totalMessages
+      }
+    };
+
+    socket.emit('chatMessagesByIdResponse', response);
+  } catch (error) {
+    console.error('Error fetching chat messages:', error);
+    socket.emit('error', { message: 'Server error' });
+  }
+});
     
     
     socket.on('getChatMessages', async ({ chatId, pageNumber }: { chatId: string; pageNumber: number }) => {
